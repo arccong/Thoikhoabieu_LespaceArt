@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Thời khoá biểu lớp Piano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --maroon:#8c3a41;
+    --maroon-dark:#6e2c31;
+    --cream:#fffefc;
+    --line:#c9a9a9;
+    --red:#d40924;
+    --ink:#2a2a2a;
+    --muted:#8a8a8a;
+    --header-bg:#ece1cf;
+    --day-header-bg:#743b1f;
+    --day-header-line:#8d5136;
+    --time-color:#743b1f;
+    --time-cell-bg:#f8f4ef;
+    --cell-bg:#fefbf7;
+    --row-border:#e6dcd4;
+    --gap-bg:#e8dbd1;
+    --gap-border:#cec1b8;
+    --legend-text:#50453d;
+    --student-black:#27201a;
+    --legend-black-swatch:#b5aca5;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;font-family:'Work Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f2eae1;color:var(--ink);}
+  #app{max-width:1100px;margin:0 auto;padding:14px 10px 100px;}
+  .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar button{
+    flex:1;min-width:100px;padding:11px 8px;border-radius:10px;border:1px solid var(--maroon);
+    background:var(--cream);color:var(--maroon-dark);font-size:14px;font-weight:600;cursor:pointer;
+  }
+  .toolbar button.primary{background:var(--maroon);color:#fff;}
+  .toolbar button:active{transform:scale(0.97);}
+  .header-block{background:var(--cream);border-radius:12px;padding:16px 18px;margin-bottom:14px;border:1px solid var(--line);}
+  .title-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  #capture-area{background:var(--cell-bg);padding:0;display:inline-block;vertical-align:top;}
+  .capture-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #capture-area.exporting .cap-footer,
+  #capture-area.exporting .level-del,
+  #capture-area.exporting .level-add{display:none !important;}
+  .cap-header{background:var(--header-bg);padding:20px 48px 18px;}
+  .header-flex{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;}
+  .header-left{display:flex;flex-direction:column;gap:3px;flex:1;min-width:200px;}
+  #orgName{
+    font-family:'Work Sans',sans-serif;font-weight:700;font-size:11px;line-height:1.6;
+    letter-spacing:1.5px;color:var(--maroon-dark);text-transform:uppercase;outline:none;
+  }
+  #title{
+    font-family:'Libre Baskerville',Georgia,serif;font-weight:700;color:var(--maroon-dark);
+    font-size:26px;outline:none;line-height:1.5;padding-top:4px;
+  }
+  #monthYear{
+    font-family:'Libre Baskerville',Georgia,serif;font-style:italic;font-size:15px;color:var(--maroon);
+    outline:none;line-height:1.6;
+  }
+  .header-right{text-align:right;flex-shrink:0;}
+  .updated-label{
+    font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:var(--maroon-dark);text-transform:uppercase;
+  }
+  #updated-date{
+    font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:16px;color:var(--maroon-dark);
+    margin-top:3px;white-space:nowrap;
+  }
+  .schedule-grid{display:grid;grid-template-columns:88px repeat(7,90px);}
+  .day-header{
+    background:var(--day-header-bg);color:#fbf8f4;text-align:center;font-size:13px;letter-spacing:0.1em;
+    font-weight:700;padding:16px 8px;text-transform:uppercase;border-left:1px solid var(--day-header-line);
+  }
+  .day-header.corner{background:var(--day-header-bg);border-left:none;}
+  .day-header:last-child{border-right:1px solid var(--day-header-line);}
+  .time-cell{
+    background:var(--time-cell-bg);border-top:1px solid var(--row-border);font-family:'Work Sans',sans-serif;
+    font-weight:700;font-size:15px;color:var(--time-color);padding:14px 10px;display:flex;align-items:flex-start;
+    cursor:pointer;white-space:nowrap;
+  }
+  .day-cell{
+    background:var(--cell-bg);border-top:1px solid var(--row-border);border-left:1px solid var(--row-border);
+    padding:10px 8px;display:flex;flex-direction:column;gap:5px;min-height:32px;cursor:pointer;
+  }
+  .day-cell.last-col{border-right:1px solid var(--row-border);}
+  .day-cell.editing-target{background:#fff7ee;}
+  .gap-row{
+    grid-column:1/-1;height:14px;background:var(--gap-bg);border-top:1px solid var(--gap-border);
+    border-bottom:1px solid var(--gap-border);border-right:1px solid var(--gap-border);
+  }
+  .cell-line{display:block;font-weight:600;font-size:16px;line-height:1.25;padding:2px 4px;font-family:'Work Sans',sans-serif;white-space:nowrap;}
+  .legend-row{
+    display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:18px 48px 28px;border-top:1px solid var(--row-border);
+  }
+  .legend-item{display:flex;align-items:center;gap:7px;}
+  .legend-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;cursor:pointer;}
+  .level-color-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+  .legend-text{font-size:12.5px;color:var(--legend-text);outline:none;}
+  .level-del{border:none;background:none;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;padding:0 2px;}
+  .level-add{
+    border:1px dashed var(--maroon);background:transparent;color:var(--maroon-dark);border-radius:6px;
+    width:22px;height:22px;font-size:15px;line-height:1;cursor:pointer;padding:0;flex-shrink:0;
+  }
+  .row-actions{display:flex;gap:4px;justify-content:center;padding-top:2px;}
+  .row-actions button{
+    border:none;background:none;color:var(--muted);font-size:15px;padding:2px 4px;cursor:pointer;
+  }
+  .add-row-bar{display:flex;justify-content:center;padding:10px 0;}
+  .add-row-bar button{
+    padding:8px 16px;border-radius:20px;border:1px dashed var(--maroon);background:transparent;
+    color:var(--maroon-dark);font-size:13px;cursor:pointer;
+  }
+  #sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:50;
+  }
+  #sheet-overlay.open{display:flex;}
+  #time-sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:50;
+  }
+  #time-sheet-overlay.open{display:flex;}
+  #time-sheet{
+    background:var(--cream);width:100%;max-width:420px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
+  }
+  #time-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
+  #time-input{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);font-size:16px;margin:6px 0 14px;
+  }
+  #delete-row-btn{
+    width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--red);background:transparent;
+    color:var(--red);font-size:14px;font-weight:600;cursor:pointer;
+  }
+  #sheet{
+    background:var(--cream);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
+    max-height:80vh;overflow-y:auto;
+  }
+  #sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
+  #sheet .hint{font-size:12px;color:var(--muted);margin:0 0 12px;}
+  #line-editor{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  .line-row{display:flex;align-items:center;gap:8px;}
+  .line-row input[type=text]{
+    flex:1;padding:9px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px;
+  }
+  .color-toggle{
+    width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;flex-shrink:0;
+  }
+  .line-row .del-line{border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;}
+  #add-line{padding:8px 12px;border-radius:8px;border:1px dashed var(--maroon);background:transparent;color:var(--maroon-dark);font-size:13px;margin-bottom:14px;width:100%;cursor:pointer;}
+  .sheet-actions{display:flex;gap:8px;}
+  .sheet-actions button{flex:1;padding:11px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--maroon);}
+  .sheet-actions .save{background:var(--maroon);color:#fff;}
+  .sheet-actions .cancel{background:transparent;color:var(--maroon-dark);}
+  #status{
+    position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--maroon-dark);color:#fff;
+    padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:60;
+  }
+  #status.show{opacity:1;}
+  .cap-footer{text-align:right;padding:6px 18px 12px;font-size:11px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="toolbar">
+    <button id="btn-add-day-note" title="Thêm hàng giờ mới" onclick="addRow()">+ Thêm giờ</button>
+    <button id="btn-export" class="primary" onclick="exportImage()">Xuất ảnh</button>
+  </div>
+
+  <div class="capture-scroll">
+  <div id="capture-area">
+    <div class="cap-header">
+      <div class="header-flex">
+        <div class="header-left">
+          <div id="orgName" contenteditable="true">TRUNG TÂM NGHỆ THUẬT L'ESPACE ART</div>
+          <div id="title" contenteditable="true">Thời khoá biểu lớp Piano</div>
+          <div id="monthYear" contenteditable="true">Tháng 7, 2026</div>
+        </div>
+        <div class="header-right">
+          <div class="updated-label">Cập nhật</div>
+          <div id="updated-date">02/07/2026</div>
+        </div>
+      </div>
+    </div>
+    <div class="schedule-grid" id="schedule-grid">
+      <div class="day-header corner"></div>
+      <div class="day-header">THỨ 2</div>
+      <div class="day-header">THỨ 3</div>
+      <div class="day-header">THỨ 4</div>
+      <div class="day-header">THỨ 5</div>
+      <div class="day-header">THỨ 6</div>
+      <div class="day-header">THỨ 7</div>
+      <div class="day-header">CN</div>
+      <div id="grid-body" style="display:contents;"></div>
+    </div>
+    <div class="legend-row" id="legend-row"></div>
+    <div class="cap-footer">Chạm vào ô để chỉnh sửa</div>
+  </div>
+  </div>
+
+  <div class="add-row-bar">
+    <button onclick="addRow()">+ Thêm dòng giờ mới</button>
+  </div>
+</div>
+
+<div id="time-sheet-overlay">
+  <div id="time-sheet">
+    <h3>Chỉnh giờ</h3>
+    <p class="hint">Nhập lại khung giờ cho dòng này.</p>
+    <input type="text" id="time-input" placeholder="VD: 9:00">
+    <div class="sheet-actions">
+      <button class="cancel" onclick="closeTimeSheet()">Huỷ</button>
+      <button class="save" onclick="saveTimeSheet()">Lưu</button>
+    </div>
+    <button id="delete-row-btn" onclick="deleteRowFromSheet()">Xoá dòng giờ này</button>
+  </div>
+</div>
+
+<div id="sheet-overlay">
+  <div id="sheet">
+    <h3 id="sheet-title">Chỉnh sửa ô</h3>
+    <p class="hint">Mỗi dòng là một học sinh. Chạm ô màu để đổi trình độ.</p>
+    <div id="line-editor"></div>
+    <button id="add-line" onclick="addLine()">+ Thêm học sinh</button>
+    <div class="sheet-actions">
+      <button class="cancel" onclick="closeSheet()">Huỷ</button>
+      <button class="save" onclick="saveSheet()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div id="status"></div>
+
+<script>
+const DAYS = 7;
+let data = null;
+let currentEdit = null;
+
+// ====== CẤU HÌNH FIREBASE (điền thông tin của bạn vào đây) ======
+// Nếu chưa điền, file vẫn chạy bình thường nhưng KHÔNG đồng bộ nhiều người
+// (mỗi người sẽ có bản lưu riêng trên máy/trình duyệt của họ).
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA3cUKuDmnbq6WiP3KI1_h4VFSRqBsA7QI",
+  authDomain: "piano-tkb.firebaseapp.com",
+  projectId: "piano-tkb",
+  storageBucket: "piano-tkb.firebasestorage.app",
+  messagingSenderId: "185431792550",
+  appId: "1:185431792550:web:24147c8a5b75944f6d0d67"
+};
+const FIREBASE_ENABLED = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
+let db = null;
+if(FIREBASE_ENABLED){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+}
+// =================================================================
+
+function defaultData(){
+  const mk = (...arr) => arr.map(s => {
+    if (typeof s === 'string' && s.startsWith('*')) return {text:s.slice(1), levelId:'lvl-red'};
+    return {text:s, levelId:'lvl-black'};
+  });
+  return {
+    orgName: "TRUNG TÂM NGHỆ THUẬT L'ESPACE ART",
+    title: "Thời khoá biểu lớp Piano",
+    monthYear: "Tháng 7, 2026",
+    updatedDate: "02/07/2026",
+    levels: [
+      {id:'lvl-red', name:'Trình độ mới - sơ cấp', color:'#d40924'},
+      {id:'lvl-black', name:'Trình độ nâng cao', color:'#27201a'}
+    ],
+    rows: [
+      {time:"9:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
+      {time:"9:30", cells:[mk(),mk(),mk(),mk(),mk(),mk("Ngọc Khánh (2ca)","*Đan Linh","Yến Mai (2ca)"),mk()]},
+      {time:"10:00", cells:[mk(),mk(),mk(),mk("*Lee An","Gia Khôi","*Quang Minh"),mk(),mk(),mk("*Trường An")]},
+      {time:"", cells:[mk(),mk(),mk(),mk(),mk(),mk(),mk()], spacer:true},
+      {time:"16:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("*Tú Linh","*Như Ý"),mk("*Tú Linh","*Như")]},
+      {time:"17:00", cells:[mk(),mk("*Đình Phúc","*Như Thảo"),mk("*Nhật Linh","*Khánh Hà"),mk("*Đình Phúc","*Như Thảo","*An Nhiên"),mk("*Nhật Linh","*Khánh Hà","T. Phương (2ca)"),mk("*Gia Hân","*An Nhiên Dâu"),mk("*An Nhiên Dâu")]},
+      {time:"17:30", cells:[mk(),mk("*Thiện Nhân","Kim Sa"),mk("*Thiện Nhân","Gia Khôi","Minh Anh"),mk("Kim Sa","Minh Anh"),mk(),mk("*Gia Bình (1,5ca)"),mk("*Gia Bình (1,5 ca)")]},
+      {time:"18:00", cells:[mk("*An Nhiên","Anh Thư","*Gia Huy Rô"),mk("*Hà My"),mk("*Tuệ Mẫn"),mk("*Lee An","*Gia Huy Rô"),mk("*Gia Hân","*Hà My","*Tuệ Mẫn"),mk(),mk()]},
+      {time:"19:00", cells:[mk("*Hạ Vi","Mỹ Anh Thỏ","Hồng Anh Mía","Minh Duy","Quang Minh"),mk("Minh Châu","Mỹ Anh Thỏ","Hồng Anh Mía"),mk(),mk("*Hạ Vi","*Đan Linh","*Minh Châu","*Minh Duy"),mk(),mk(),mk()]}
+    ]
+  };
+}
+
+function migrateRows(rows, fallbackId){
+  return rows.map(row => ({
+    ...row,
+    cells: (row.cells || []).map(cellArr => (cellArr || []).map(item => {
+      if(item.levelId) return {text:item.text, levelId:item.levelId};
+      const levelId = item.color === 'red' ? 'lvl-red' : (item.color === 'black' ? 'lvl-black' : fallbackId);
+      return {text:item.text, levelId};
+    }))
+  }));
+}
+
+function migrateData(loaded){
+  const def = defaultData();
+  let updatedDate = loaded.updatedDate;
+  if(!updatedDate && loaded.updated){
+    updatedDate = loaded.updated.replace('Cập nhật:', '').trim();
+  }
+  let levels = loaded.levels;
+  if(!levels || !levels.length){
+    levels = [
+      {id:'lvl-red', name: loaded.legendRed ?? def.levels[0].name, color: def.levels[0].color},
+      {id:'lvl-black', name: loaded.legendBlack ?? def.levels[1].name, color: def.levels[1].color}
+    ];
+  }
+  return {
+    orgName: loaded.orgName ?? def.orgName,
+    title: loaded.title ?? def.title,
+    monthYear: loaded.monthYear ?? def.monthYear,
+    updatedDate: updatedDate ?? def.updatedDate,
+    levels,
+    rows: migrateRows(loaded.rows ?? def.rows, levels[0]?.id)
+  };
+}
+
+function showStatus(msg){
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 1600);
+}
+
+const STORAGE_KEY = 'piano-schedule';
+
+async function loadData(){
+  if(FIREBASE_ENABLED && db){
+    db.collection('piano').doc('schedule').onSnapshot(async (doc) => {
+      if(doc.exists){
+        const raw = doc.data();
+        let rows = [];
+        try{ rows = JSON.parse(raw.rowsJson || '[]'); }catch(e){ rows = []; }
+        data = migrateData({...raw, rows});
+        render();
+      } else {
+        data = defaultData();
+        render();
+        try{ await saveToFirestore(); }
+        catch(e){ console.error('Firestore init error', e); }
+      }
+    }, (err) => {
+      console.error('Firestore listen error, dùng dữ liệu cục bộ thay thế', err);
+      loadLocalOrDefault();
+    });
+    return;
+  }
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){
+      data = migrateData(JSON.parse(res.value));
+      render();
+      return;
+    }
+  }catch(e){
+    // window.storage không khả dụng (mở file độc lập ngoài Claude) hoặc chưa có dữ liệu
+  }
+  loadLocalOrDefault();
+}
+
+function loadLocalOrDefault(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      data = migrateData(JSON.parse(raw));
+      render();
+      return;
+    }
+  }catch(e){
+    // localStorage cũng không khả dụng
+  }
+  data = defaultData();
+  render();
+}
+
+async function saveToFirestore(){
+  const { rows, ...rest } = data;
+  await db.collection('piano').doc('schedule').set({
+    ...rest,
+    rowsJson: JSON.stringify(rows)
+  });
+}
+
+async function saveData(){
+  const json = JSON.stringify(data);
+  if(FIREBASE_ENABLED && db){
+    try{
+      await saveToFirestore();
+    }catch(e){
+      console.error('Firestore save error', e);
+    }
+    try{ localStorage.setItem(STORAGE_KEY, json); }catch(e){}
+    return;
+  }
+  let savedRemote = false;
+  try{
+    await window.storage.set(STORAGE_KEY, json, false);
+    savedRemote = true;
+  }catch(e){
+    // window.storage không khả dụng, dùng localStorage thay thế
+  }
+  try{
+    localStorage.setItem(STORAGE_KEY, json);
+  }catch(e){
+    if(!savedRemote) console.error('Storage error', e);
+  }
+}
+
+function todayStr(){
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth()+1).padStart(2, '0');
+  return `${day}/${month}/${d.getFullYear()}`;
+}
+
+function bumpUpdated(){
+  data.updatedDate = todayStr();
+  document.getElementById('updated-date').textContent = data.updatedDate;
+}
+
+let currentTimeEdit = null;
+
+function openTimeSheet(rIdx){
+  currentTimeEdit = rIdx;
+  document.getElementById('time-input').value = data.rows[rIdx].time;
+  document.getElementById('time-sheet-overlay').classList.add('open');
+}
+
+function closeTimeSheet(){
+  document.getElementById('time-sheet-overlay').classList.remove('open');
+  currentTimeEdit = null;
+}
+
+function saveTimeSheet(){
+  if(currentTimeEdit === null) return;
+  data.rows[currentTimeEdit].time = document.getElementById('time-input').value.trim();
+  bumpUpdated();
+  render();
+  saveData();
+  closeTimeSheet();
+  showStatus('Đã lưu');
+}
+
+function deleteRowFromSheet(){
+  if(currentTimeEdit === null) return;
+  if(!confirm('Xoá dòng giờ này?')) return;
+  data.rows.splice(currentTimeEdit, 1);
+  bumpUpdated();
+  render();
+  saveData();
+  closeTimeSheet();
+  showStatus('Đã xoá dòng');
+}
+
+document.getElementById('time-sheet-overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'time-sheet-overlay') closeTimeSheet();
+});
+
+function levelColor(levelId){
+  const lvl = data.levels.find(l => l.id === levelId);
+  if(lvl) return lvl.color;
+  return data.levels[0] ? data.levels[0].color : '#27201a';
+}
+
+let _measureCanvas = null;
+function measureTextPx(text){
+  if(!_measureCanvas) _measureCanvas = document.createElement('canvas');
+  const ctx = _measureCanvas.getContext('2d');
+  ctx.font = "600 16px 'Work Sans', sans-serif";
+  return ctx.measureText(text).width;
+}
+
+function applyColumnWidths(){
+  const MIN_COL = 90;
+  const EXTRA = 34; // padding ngang của .day-cell + .cell-line + đệm an toàn
+  const widths = new Array(DAYS).fill(MIN_COL);
+  data.rows.forEach(row => {
+    if(row.spacer) return;
+    for(let d=0; d<DAYS; d++){
+      const lines = row.cells[d] || [];
+      lines.forEach(l => {
+        const w = measureTextPx(l.text) + EXTRA;
+        if(w > widths[d]) widths[d] = w;
+      });
+    }
+  });
+  const grid = document.getElementById('schedule-grid');
+  grid.style.gridTemplateColumns = '88px ' + widths.map(w => Math.ceil(w) + 'px').join(' ');
+}
+
+function render(){
+  document.getElementById('orgName').textContent = data.orgName;
+  document.getElementById('title').textContent = data.title;
+  document.getElementById('monthYear').textContent = data.monthYear;
+  document.getElementById('updated-date').textContent = data.updatedDate;
+  const gridBody = document.getElementById('grid-body');
+  gridBody.innerHTML = '';
+  data.rows.forEach((row, rIdx) => {
+    if(row.spacer){
+      const gap = document.createElement('div');
+      gap.className = 'gap-row';
+      gridBody.appendChild(gap);
+      return;
+    }
+    const timeCell = document.createElement('div');
+    timeCell.className = 'time-cell';
+    timeCell.textContent = row.time;
+    timeCell.onclick = () => openTimeSheet(rIdx);
+    gridBody.appendChild(timeCell);
+    for(let d=0; d<DAYS; d++){
+      const cell = document.createElement('div');
+      cell.className = 'day-cell' + (d === DAYS-1 ? ' last-col' : '');
+      cell.onclick = () => openSheet(rIdx, d);
+      const lines = row.cells[d] || [];
+      cell.innerHTML = lines.map(l => `<span class="cell-line" style="color:${levelColor(l.levelId)}">${escapeHtml(l.text)}</span>`).join('');
+      gridBody.appendChild(cell);
+    }
+  });
+  renderLegend();
+  applyColumnWidths();
+}
+
+function renderLegend(){
+  const container = document.getElementById('legend-row');
+  container.innerHTML = '';
+  data.levels.forEach(level => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <span class="legend-swatch" style="background:${level.color}"></span>
+      <input type="color" class="level-color-input" value="${level.color}">
+      <span class="legend-text" contenteditable="true">${escapeHtml(level.name)}</span>
+      <button class="level-del" title="Xoá trình độ">−</button>
+    `;
+    const swatch = item.querySelector('.legend-swatch');
+    const colorInput = item.querySelector('.level-color-input');
+    const nameSpan = item.querySelector('.legend-text');
+    const delBtn = item.querySelector('.level-del');
+    swatch.onclick = () => colorInput.click();
+    colorInput.addEventListener('input', (e) => updateLevelColor(level.id, e.target.value));
+    nameSpan.addEventListener('blur', (e) => updateLevelName(level.id, e.target.textContent.trim()));
+    nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+    delBtn.onclick = () => removeLevel(level.id);
+    container.appendChild(item);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'level-add';
+  addBtn.textContent = '+';
+  addBtn.title = 'Thêm trình độ';
+  addBtn.onclick = addLevel;
+  container.appendChild(addBtn);
+}
+
+function updateLevelColor(levelId, color){
+  const lvl = data.levels.find(l => l.id === levelId);
+  if(!lvl) return;
+  lvl.color = color;
+  bumpUpdated();
+  render();
+  saveData();
+}
+
+function updateLevelName(levelId, name){
+  const lvl = data.levels.find(l => l.id === levelId);
+  if(!lvl || !name) return;
+  lvl.name = name;
+  bumpUpdated();
+  saveData();
+}
+
+function addLevel(){
+  const palette = ['#2e7d32','#1565c0','#6a1b9a','#ef6c00','#00838f','#ad1457','#5d4037'];
+  const used = data.levels.map(l => l.color);
+  const nextColor = palette.find(c => !used.includes(c)) || palette[data.levels.length % palette.length];
+  const id = 'lvl-' + Date.now();
+  data.levels.push({id, name:'Trình độ mới', color: nextColor});
+  bumpUpdated();
+  render();
+  saveData();
+  showStatus('Đã thêm trình độ');
+}
+
+function removeLevel(levelId){
+  if(data.levels.length <= 1){
+    showStatus('Cần giữ lại ít nhất 1 trình độ');
+    return;
+  }
+  if(!confirm('Xoá trình độ này? Học sinh đang dùng trình độ này sẽ chuyển sang trình độ đầu tiên.')) return;
+  const fallback = data.levels.find(l => l.id !== levelId);
+  data.levels = data.levels.filter(l => l.id !== levelId);
+  data.rows.forEach(row => {
+    (row.cells || []).forEach(cellArr => {
+      (cellArr || []).forEach(item => {
+        if(item.levelId === levelId) item.levelId = fallback.id;
+      });
+    });
+  });
+  bumpUpdated();
+  render();
+  saveData();
+  showStatus('Đã xoá trình độ');
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function addRow(){
+  data.rows.push({
+    time: "00:00",
+    cells: Array.from({length:DAYS}, () => [])
+  });
+  bumpUpdated();
+  render();
+  saveData();
+  showStatus('Đã thêm dòng mới');
+}
+
+function openSheet(rIdx, dIdx){
+  currentEdit = {rIdx, dIdx};
+  const lines = data.rows[rIdx].cells[dIdx] || [];
+  document.getElementById('sheet-title').textContent = `${data.rows[rIdx].time} · ${['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'][dIdx]}`;
+  const editor = document.getElementById('line-editor');
+  editor.innerHTML = '';
+  if(lines.length === 0){
+    addLineRow('', data.levels[0]?.id);
+  } else {
+    lines.forEach(l => addLineRow(l.text, l.levelId));
+  }
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function addLineRow(text, levelId){
+  const editor = document.getElementById('line-editor');
+  const row = document.createElement('div');
+  row.className = 'line-row';
+  const initialId = levelId || (data.levels[0] ? data.levels[0].id : '');
+  const initialColor = levelColor(initialId);
+  row.innerHTML = `
+    <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cycleLevel(this)"></div>
+    <input type="text" value="${escapeHtml(text)}" placeholder="Tên học sinh">
+    <button class="del-line" onclick="this.parentElement.remove()">✕</button>
+  `;
+  editor.appendChild(row);
+}
+
+function addLine(){
+  addLineRow('', data.levels[0]?.id);
+}
+
+function cycleLevel(el){
+  const ids = data.levels.map(l => l.id);
+  if(ids.length === 0) return;
+  let idx = ids.indexOf(el.dataset.levelId);
+  idx = (idx + 1) % ids.length;
+  const nextId = ids[idx];
+  el.dataset.levelId = nextId;
+  el.style.background = levelColor(nextId);
+}
+
+function closeSheet(){
+  document.getElementById('sheet-overlay').classList.remove('open');
+  currentEdit = null;
+}
+
+function saveSheet(){
+  if(!currentEdit) return;
+  const rows = document.querySelectorAll('#line-editor .line-row');
+  const newLines = [];
+  rows.forEach(r => {
+    const text = r.querySelector('input').value.trim();
+    if(text){
+      const levelId = r.querySelector('.color-toggle').dataset.levelId;
+      newLines.push({text, levelId});
+    }
+  });
+  data.rows[currentEdit.rIdx].cells[currentEdit.dIdx] = newLines;
+  bumpUpdated();
+  render();
+  saveData();
+  closeSheet();
+  showStatus('Đã lưu');
+}
+
+function preventEnter(e){
+  if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); }
+}
+
+document.getElementById('orgName').addEventListener('input', (e) => {
+  data.orgName = e.target.textContent;
+  bumpUpdated();
+  saveData();
+});
+document.getElementById('orgName').addEventListener('keydown', preventEnter);
+
+document.getElementById('title').addEventListener('input', (e) => {
+  data.title = e.target.textContent;
+  bumpUpdated();
+  saveData();
+});
+document.getElementById('title').addEventListener('keydown', preventEnter);
+
+document.getElementById('monthYear').addEventListener('input', (e) => {
+  data.monthYear = e.target.textContent;
+  bumpUpdated();
+  saveData();
+});
+document.getElementById('monthYear').addEventListener('keydown', preventEnter);
+
+function exportFilename(){
+  const safeDate = data.updatedDate.replace(/\//g, '');
+  return `Thoikhoabieu_PIANO_${safeDate}.png`;
+}
+
+async function exportImage(){
+  showStatus('Đang tạo ảnh...');
+  const el = document.getElementById('capture-area');
+  el.classList.add('exporting');
+  try{
+    if(document.fonts && document.fonts.ready){
+      await document.fonts.ready;
+    }
+    const scaleFactor = Math.max(3, (window.devicePixelRatio || 1) * 2);
+    const fullWidth = el.scrollWidth;
+    const fullHeight = el.scrollHeight;
+    const canvas = await html2canvas(el, {
+      backgroundColor:'#fefbf7',
+      scale: scaleFactor,
+      useCORS: true,
+      logging: false,
+      imageTimeout: 0,
+      width: fullWidth,
+      height: fullHeight,
+      windowWidth: fullWidth,
+      windowHeight: fullHeight,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0
+    });
+    const link = document.createElement('a');
+    link.download = exportFilename();
+    link.href = canvas.toDataURL('image/png', 1.0);
+    link.click();
+    showStatus('Đã tải ảnh về máy');
+  }catch(e){
+    showStatus('Lỗi khi xuất ảnh');
+    console.error(e);
+  }finally{
+    el.classList.remove('exporting');
+  }
+}
+
+document.getElementById('sheet-overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'sheet-overlay') closeSheet();
+});
+
+loadData();
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => { if(data) applyColumnWidths(); });
+}
+</script>
+</body>
+</html>
