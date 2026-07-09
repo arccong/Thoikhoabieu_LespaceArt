@@ -34,7 +34,14 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;font-family:'Work Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f2eae1;color:var(--ink);}
-  #app{max-width:1100px;margin:0 auto;padding:14px 10px 100px;}
+  #app{max-width:1100px;margin:0 auto;padding:14px 10px 90px;}
+  .class-select{
+    flex:1;min-width:140px;padding:11px 12px;border-radius:10px;border:1px solid var(--maroon);
+    background:var(--cream);color:var(--maroon-dark);font-size:14px;font-weight:600;cursor:pointer;
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e2c31' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;background-size:16px;padding-right:34px;
+  }
   .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
   .toolbar button{
     flex:1;min-width:100px;padding:11px 8px;border-radius:10px;border:1px solid var(--maroon);
@@ -111,11 +118,12 @@
   .row-actions button{
     border:none;background:none;color:var(--muted);font-size:15px;padding:2px 4px;cursor:pointer;
   }
-  .add-row-bar{display:flex;justify-content:center;padding:10px 0;}
-  .add-row-bar button{
-    padding:8px 16px;border-radius:20px;border:1px dashed var(--maroon);background:transparent;
-    color:var(--maroon-dark);font-size:13px;cursor:pointer;
+  #btn-export-fab{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:40;
+    padding:13px 34px;border-radius:999px;border:none;background:var(--maroon);color:#fff;
+    font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25);
   }
+  #btn-export-fab:active{transform:translateX(-50%) scale(0.96);}
   #sheet-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:50;
   }
@@ -128,12 +136,27 @@
     background:var(--cream);width:100%;max-width:420px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
   }
   #time-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
+  #theme-sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:50;
+  }
+  #theme-sheet-overlay.open{display:flex;}
+  #theme-sheet{
+    background:var(--cream);width:100%;max-width:420px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
+  }
+  #theme-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
+  .theme-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-size:14px;}
+  .theme-row input[type=color]{width:44px;height:34px;border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;}
   #time-input{
     width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);font-size:16px;margin:6px 0 14px;
   }
   #delete-row-btn{
     width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1px solid var(--red);background:transparent;
     color:var(--red);font-size:14px;font-weight:600;cursor:pointer;
+  }
+  .insert-row-actions{display:flex;gap:8px;margin-top:10px;}
+  .insert-row-actions button{
+    flex:1;padding:10px;border-radius:10px;border:1px solid var(--maroon);background:transparent;
+    color:var(--maroon-dark);font-size:13px;font-weight:600;cursor:pointer;
   }
   #sheet{
     background:var(--cream);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
@@ -156,7 +179,7 @@
   .sheet-actions .save{background:var(--maroon);color:#fff;}
   .sheet-actions .cancel{background:transparent;color:var(--maroon-dark);}
   #status{
-    position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--maroon-dark);color:#fff;
+    position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:var(--maroon-dark);color:#fff;
     padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:60;
   }
   #status.show{opacity:1;}
@@ -166,8 +189,12 @@
 <body>
 <div id="app">
   <div class="toolbar">
-    <button id="btn-add-day-note" title="Thêm hàng giờ mới" onclick="addRow()">+ Thêm giờ</button>
-    <button id="btn-export" class="primary" onclick="exportImage()">Xuất ảnh</button>
+    <select id="class-select" class="class-select">
+      <option value="piano">Lớp Piano</option>
+      <option value="mua">Lớp Múa</option>
+      <option value="ve">Lớp Vẽ</option>
+    </select>
+    <button id="btn-theme" onclick="openThemeSheet()">Chỉnh màu</button>
   </div>
 
   <div class="capture-scroll">
@@ -201,10 +228,9 @@
   </div>
   </div>
 
-  <div class="add-row-bar">
-    <button onclick="addRow()">+ Thêm dòng giờ mới</button>
-  </div>
 </div>
+
+<button id="btn-export-fab" onclick="exportImage()">Xuất ảnh</button>
 
 <div id="time-sheet-overlay">
   <div id="time-sheet">
@@ -215,7 +241,30 @@
       <button class="cancel" onclick="closeTimeSheet()">Huỷ</button>
       <button class="save" onclick="saveTimeSheet()">Lưu</button>
     </div>
+    <div class="insert-row-actions">
+      <button onclick="insertRowRelative('above')">↑ Thêm dòng trên</button>
+      <button onclick="insertRowRelative('below')">↓ Thêm dòng dưới</button>
+    </div>
     <button id="delete-row-btn" onclick="deleteRowFromSheet()">Xoá dòng giờ này</button>
+  </div>
+</div>
+
+<div id="theme-sheet-overlay">
+  <div id="theme-sheet">
+    <h3>Màu sắc cho lớp này</h3>
+    <p class="hint">Đổi màu sẽ áp dụng riêng cho lớp đang chọn.</p>
+    <div class="theme-row">
+      <span>Nền khối tiêu đề</span>
+      <input type="color" id="theme-header-bg">
+    </div>
+    <div class="theme-row">
+      <span>Thanh ngày trong tuần</span>
+      <input type="color" id="theme-day-header-bg">
+    </div>
+    <div class="sheet-actions">
+      <button class="cancel" onclick="closeThemeSheet()">Huỷ</button>
+      <button class="save" onclick="saveThemeSheet()">Lưu</button>
+    </div>
   </div>
 </div>
 
@@ -239,6 +288,14 @@ const DAYS = 7;
 let data = null;
 let currentEdit = null;
 
+// ====== DANH SÁCH CÁC LỚP ======
+const CLASS_IDS = ['piano', 'mua', 've'];
+const CLASS_LABELS = { piano: 'Piano', mua: 'Múa', ve: 'Vẽ' };
+const CLASS_DOC_MAP = { piano: 'schedule', mua: 'schedule_mua', ve: 'schedule_ve' };
+let currentClassId = 'piano';
+const dataByClass = {};
+// ================================
+
 // ====== CẤU HÌNH FIREBASE (điền thông tin của bạn vào đây) ======
 // Nếu chưa điền, file vẫn chạy bình thường nhưng KHÔNG đồng bộ nhiều người
 // (mỗi người sẽ có bản lưu riêng trên máy/trình duyệt của họ).
@@ -258,7 +315,48 @@ if(FIREBASE_ENABLED){
 }
 // =================================================================
 
-function defaultData(){
+function emptyTemplateRows(){
+  return [
+    {time:"9:00", cells: Array.from({length:DAYS}, () => [])},
+    {time:"10:00", cells: Array.from({length:DAYS}, () => [])},
+    {time:"", cells: Array.from({length:DAYS}, () => []), spacer:true},
+    {time:"16:00", cells: Array.from({length:DAYS}, () => [])},
+    {time:"17:00", cells: Array.from({length:DAYS}, () => [])},
+    {time:"18:00", cells: Array.from({length:DAYS}, () => [])}
+  ];
+}
+
+function defaultLevels(){
+  return [
+    {id:'lvl-red', name:'Trình độ mới - sơ cấp', color:'#d40924'},
+    {id:'lvl-black', name:'Trình độ nâng cao', color:'#27201a'}
+  ];
+}
+
+function defaultDataFor(classId){
+  if(classId === 'mua'){
+    return {
+      orgName: "TRUNG TÂM NGHỆ THUẬT L'ESPACE ART",
+      title: "Thời khoá biểu lớp Múa",
+      monthYear: "Tháng 7, 2026",
+      updatedDate: "02/07/2026",
+      theme: { headerBg:'#f3e6ee', dayHeaderBg:'#7a2e4d' },
+      levels: defaultLevels(),
+      rows: emptyTemplateRows()
+    };
+  }
+  if(classId === 've'){
+    return {
+      orgName: "TRUNG TÂM NGHỆ THUẬT L'ESPACE ART",
+      title: "Thời khoá biểu lớp Vẽ",
+      monthYear: "Tháng 7, 2026",
+      updatedDate: "02/07/2026",
+      theme: { headerBg:'#e5edf0', dayHeaderBg:'#264a5c' },
+      levels: defaultLevels(),
+      rows: emptyTemplateRows()
+    };
+  }
+  // piano (mặc định, giữ nguyên dữ liệu gốc)
   const mk = (...arr) => arr.map(s => {
     if (typeof s === 'string' && s.startsWith('*')) return {text:s.slice(1), levelId:'lvl-red'};
     return {text:s, levelId:'lvl-black'};
@@ -268,10 +366,8 @@ function defaultData(){
     title: "Thời khoá biểu lớp Piano",
     monthYear: "Tháng 7, 2026",
     updatedDate: "02/07/2026",
-    levels: [
-      {id:'lvl-red', name:'Trình độ mới - sơ cấp', color:'#d40924'},
-      {id:'lvl-black', name:'Trình độ nâng cao', color:'#27201a'}
-    ],
+    theme: { headerBg:'#ece1cf', dayHeaderBg:'#743b1f' },
+    levels: defaultLevels(),
     rows: [
       {time:"9:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
       {time:"9:30", cells:[mk(),mk(),mk(),mk(),mk(),mk("Ngọc Khánh (2ca)","*Đan Linh","Yến Mai (2ca)"),mk()]},
@@ -297,8 +393,8 @@ function migrateRows(rows, fallbackId){
   }));
 }
 
-function migrateData(loaded){
-  const def = defaultData();
+function migrateData(loaded, classId){
+  const def = defaultDataFor(classId);
   let updatedDate = loaded.updatedDate;
   if(!updatedDate && loaded.updated){
     updatedDate = loaded.updated.replace('Cập nhật:', '').trim();
@@ -315,6 +411,7 @@ function migrateData(loaded){
     title: loaded.title ?? def.title,
     monthYear: loaded.monthYear ?? def.monthYear,
     updatedDate: updatedDate ?? def.updatedDate,
+    theme: loaded.theme ?? def.theme,
     levels,
     rows: migrateRows(loaded.rows ?? def.rows, levels[0]?.id)
   };
@@ -327,85 +424,104 @@ function showStatus(msg){
   setTimeout(()=>el.classList.remove('show'), 1600);
 }
 
-const STORAGE_KEY = 'piano-schedule';
+function storageKeyFor(classId){
+  return classId === 'piano' ? 'piano-schedule' : ('piano-schedule_' + classId);
+}
 
-async function loadData(){
+function subscribeClass(classId){
   if(FIREBASE_ENABLED && db){
-    db.collection('piano').doc('schedule').onSnapshot(async (doc) => {
+    db.collection('piano').doc(CLASS_DOC_MAP[classId]).onSnapshot(async (doc) => {
+      let newData;
       if(doc.exists){
         const raw = doc.data();
         let rows = [];
         try{ rows = JSON.parse(raw.rowsJson || '[]'); }catch(e){ rows = []; }
-        data = migrateData({...raw, rows});
-        render();
+        newData = migrateData({...raw, rows}, classId);
       } else {
-        data = defaultData();
-        render();
-        try{ await saveToFirestore(); }
+        newData = defaultDataFor(classId);
+        try{ await saveClassToFirestore(classId, newData); }
         catch(e){ console.error('Firestore init error', e); }
       }
+      dataByClass[classId] = newData;
+      if(classId === currentClassId){
+        data = newData;
+        applyTheme(data.theme);
+        render();
+      }
     }, (err) => {
-      console.error('Firestore listen error, dùng dữ liệu cục bộ thay thế', err);
-      loadLocalOrDefault();
+      console.error('Firestore listen error cho lớp ' + classId + ', dùng dữ liệu cục bộ thay thế', err);
+      loadLocalOrDefaultFor(classId);
     });
     return;
   }
-  try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    if(res && res.value){
-      data = migrateData(JSON.parse(res.value));
-      render();
-      return;
+  (async () => {
+    try{
+      const res = await window.storage.get(storageKeyFor(classId), false);
+      if(res && res.value){
+        const newData = migrateData(JSON.parse(res.value), classId);
+        dataByClass[classId] = newData;
+        if(classId === currentClassId){
+          data = newData;
+          applyTheme(data.theme);
+          render();
+        }
+        return;
+      }
+    }catch(e){
+      // window.storage không khả dụng (mở file độc lập ngoài Claude) hoặc chưa có dữ liệu
     }
-  }catch(e){
-    // window.storage không khả dụng (mở file độc lập ngoài Claude) hoặc chưa có dữ liệu
-  }
-  loadLocalOrDefault();
+    loadLocalOrDefaultFor(classId);
+  })();
 }
 
-function loadLocalOrDefault(){
+function loadLocalOrDefaultFor(classId){
+  let newData = null;
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      data = migrateData(JSON.parse(raw));
-      render();
-      return;
-    }
+    const raw = localStorage.getItem(storageKeyFor(classId));
+    if(raw) newData = migrateData(JSON.parse(raw), classId);
   }catch(e){
     // localStorage cũng không khả dụng
   }
-  data = defaultData();
-  render();
+  if(!newData) newData = defaultDataFor(classId);
+  dataByClass[classId] = newData;
+  if(classId === currentClassId){
+    data = newData;
+    applyTheme(data.theme);
+    render();
+  }
 }
 
-async function saveToFirestore(){
-  const { rows, ...rest } = data;
-  await db.collection('piano').doc('schedule').set({
+async function saveClassToFirestore(classId, d){
+  const { rows, ...rest } = d;
+  await db.collection('piano').doc(CLASS_DOC_MAP[classId]).set({
     ...rest,
     rowsJson: JSON.stringify(rows)
   });
 }
 
 async function saveData(){
+  const classId = currentClassId;
+  const key = storageKeyFor(classId);
   const json = JSON.stringify(data);
+  dataByClass[classId] = data;
   if(FIREBASE_ENABLED && db){
     try{
-      await saveToFirestore();
+      await saveClassToFirestore(classId, data);
     }catch(e){
       console.error('Firestore save error', e);
     }
-    try{ localStorage.setItem(STORAGE_KEY, json); }catch(e){}
+    try{ localStorage.setItem(key, json); }catch(e){}
     return;
   }
   let savedRemote = false;
   try{
-    await window.storage.set(STORAGE_KEY, json, false);
+    await window.storage.set(key, json, false);
     savedRemote = true;
   }catch(e){
     // window.storage không khả dụng, dùng localStorage thay thế
   }
   try{
-    localStorage.setItem(STORAGE_KEY, json);
+    localStorage.setItem(key, json);
   }catch(e){
     if(!savedRemote) console.error('Storage error', e);
   }
@@ -422,6 +538,71 @@ function bumpUpdated(){
   data.updatedDate = todayStr();
   document.getElementById('updated-date').textContent = data.updatedDate;
 }
+
+function hexToRgb(hex){
+  hex = hex.replace('#','');
+  if(hex.length === 3) hex = hex.split('').map(c => c+c).join('');
+  const num = parseInt(hex, 16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+
+function rgbToHex(r,g,b){
+  const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+  return '#' + [r,g,b].map(v => clamp(v).toString(16).padStart(2,'0')).join('');
+}
+
+function lighten(hex, percent){
+  const {r,g,b} = hexToRgb(hex);
+  return rgbToHex(r+(255-r)*percent/100, g+(255-g)*percent/100, b+(255-b)*percent/100);
+}
+
+function applyTheme(theme){
+  if(!theme) return;
+  const root = document.documentElement.style;
+  root.setProperty('--header-bg', theme.headerBg);
+  root.setProperty('--day-header-bg', theme.dayHeaderBg);
+  root.setProperty('--day-header-line', lighten(theme.dayHeaderBg, 15));
+  root.setProperty('--time-color', theme.dayHeaderBg);
+}
+
+function openThemeSheet(){
+  document.getElementById('theme-header-bg').value = data.theme.headerBg;
+  document.getElementById('theme-day-header-bg').value = data.theme.dayHeaderBg;
+  document.getElementById('theme-sheet-overlay').classList.add('open');
+}
+
+function closeThemeSheet(){
+  document.getElementById('theme-sheet-overlay').classList.remove('open');
+}
+
+function saveThemeSheet(){
+  data.theme.headerBg = document.getElementById('theme-header-bg').value;
+  data.theme.dayHeaderBg = document.getElementById('theme-day-header-bg').value;
+  applyTheme(data.theme);
+  bumpUpdated();
+  render();
+  saveData();
+  closeThemeSheet();
+  showStatus('Đã lưu màu sắc');
+}
+
+function switchClass(classId){
+  if(classId === currentClassId) return;
+  currentClassId = classId;
+  const sel = document.getElementById('class-select');
+  if(sel.value !== classId) sel.value = classId;
+  if(dataByClass[classId]){
+    data = dataByClass[classId];
+    applyTheme(data.theme);
+    render();
+  } else {
+    showStatus('Đang tải dữ liệu lớp ' + (CLASS_LABELS[classId] || classId) + '...');
+  }
+}
+
+document.getElementById('class-select').addEventListener('change', (e) => {
+  switchClass(e.target.value);
+});
 
 let currentTimeEdit = null;
 
@@ -444,6 +625,20 @@ function saveTimeSheet(){
   saveData();
   closeTimeSheet();
   showStatus('Đã lưu');
+}
+
+function insertRowRelative(position){
+  if(currentTimeEdit === null) return;
+  const insertIdx = position === 'above' ? currentTimeEdit : currentTimeEdit + 1;
+  data.rows.splice(insertIdx, 0, {
+    time: "00:00",
+    cells: Array.from({length:DAYS}, () => [])
+  });
+  bumpUpdated();
+  render();
+  saveData();
+  closeTimeSheet();
+  showStatus(position === 'above' ? 'Đã thêm dòng phía trên' : 'Đã thêm dòng phía dưới');
 }
 
 function deleteRowFromSheet(){
@@ -715,8 +910,9 @@ document.getElementById('monthYear').addEventListener('input', (e) => {
 document.getElementById('monthYear').addEventListener('keydown', preventEnter);
 
 function exportFilename(){
+  const label = (CLASS_LABELS[currentClassId] || currentClassId).toUpperCase();
   const safeDate = data.updatedDate.replace(/\//g, '');
-  return `Thoikhoabieu_PIANO_${safeDate}.png`;
+  return `Thoikhoabieu_${label}_${safeDate}.png`;
 }
 
 async function exportImage(){
@@ -762,7 +958,7 @@ document.getElementById('sheet-overlay').addEventListener('click', (e) => {
   if(e.target.id === 'sheet-overlay') closeSheet();
 });
 
-loadData();
+CLASS_IDS.forEach(id => subscribeClass(id));
 if(document.fonts && document.fonts.ready){
   document.fonts.ready.then(() => { if(data) applyColumnWidths(); });
 }
