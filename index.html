@@ -146,6 +146,18 @@
   #theme-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
   .theme-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-size:14px;}
   .theme-row input[type=color]{width:44px;height:34px;border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;}
+  #pin-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
+  }
+  #pin-overlay.open{display:flex;}
+  #pin-sheet{
+    background:var(--cream);width:100%;max-width:380px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
+  }
+  #pin-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
+  #pin-input{
+    width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);font-size:20px;letter-spacing:4px;
+    text-align:center;margin:10px 0 14px;
+  }
   #time-input{
     width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);font-size:16px;margin:6px 0 14px;
   }
@@ -184,17 +196,22 @@
   }
   #status.show{opacity:1;}
   .cap-footer{text-align:right;padding:6px 18px 12px;font-size:11px;color:var(--muted);}
+  body.view-mode .time-cell,
+  body.view-mode .day-cell{cursor:default;}
+  body.view-mode .cap-footer{display:none;}
 </style>
 </head>
-<body>
+<body class="view-mode">
 <div id="app">
-  <div class="toolbar">
+  <div class="toolbar" id="toolbar-main">
     <select id="class-select" class="class-select">
       <option value="piano">Lớp Piano</option>
       <option value="mua">Lớp Múa</option>
       <option value="ve">Lớp Vẽ</option>
     </select>
-    <button id="btn-theme" onclick="openThemeSheet()">Chỉnh màu</button>
+    <button id="btn-request-edit" onclick="requestEditMode()">Chỉnh sửa</button>
+    <button id="btn-theme" onclick="openThemeSheet()" style="display:none;">Chỉnh màu</button>
+    <button id="btn-exit-edit" onclick="exitEditMode()" style="display:none;">Thoát</button>
   </div>
 
   <div class="capture-scroll">
@@ -202,9 +219,9 @@
     <div class="cap-header">
       <div class="header-flex">
         <div class="header-left">
-          <div id="orgName" contenteditable="true">TRUNG TÂM NGHỆ THUẬT L'ESPACE ART</div>
-          <div id="title" contenteditable="true">Thời khoá biểu lớp Piano</div>
-          <div id="monthYear" contenteditable="true">Tháng 7, 2026</div>
+          <div id="orgName" contenteditable="false">TRUNG TÂM NGHỆ THUẬT L'ESPACE ART</div>
+          <div id="title" contenteditable="false">Thời khoá biểu lớp Piano</div>
+          <div id="monthYear" contenteditable="false">Tháng 7, 2026</div>
         </div>
         <div class="header-right">
           <div class="updated-label">Cập nhật</div>
@@ -249,6 +266,18 @@
   </div>
 </div>
 
+<div id="pin-overlay">
+  <div id="pin-sheet">
+    <h3>Nhập mã để chỉnh sửa</h3>
+    <p class="hint">Nhập mã PIN để mở chế độ chỉnh sửa.</p>
+    <input type="password" id="pin-input" inputmode="numeric" autocomplete="off" placeholder="Mã PIN">
+    <div class="sheet-actions">
+      <button class="cancel" onclick="closePinSheet()">Huỷ</button>
+      <button class="save" onclick="submitPin()">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
 <div id="theme-sheet-overlay">
   <div id="theme-sheet">
     <h3>Màu sắc cho lớp này</h3>
@@ -287,6 +316,11 @@
 const DAYS = 7;
 let data = null;
 let currentEdit = null;
+let editMode = false;
+
+// ====== MÃ PIN ĐỂ VÀO CHẾ ĐỘ CHỈNH SỬA (đổi số này để đổi mã) ======
+const EDIT_PIN = '12358';
+// ====================================================================
 
 // ====== DANH SÁCH CÁC LỚP ======
 const CLASS_IDS = ['piano', 'mua', 've'];
@@ -586,6 +620,52 @@ function saveThemeSheet(){
   showStatus('Đã lưu màu sắc');
 }
 
+function setEditMode(on){
+  editMode = on;
+  document.body.classList.toggle('view-mode', !on);
+  document.getElementById('btn-request-edit').style.display = on ? 'none' : '';
+  document.getElementById('btn-theme').style.display = on ? '' : 'none';
+  document.getElementById('btn-exit-edit').style.display = on ? '' : 'none';
+  ['orgName','title','monthYear'].forEach(id => {
+    document.getElementById(id).contentEditable = on ? 'true' : 'false';
+  });
+  render();
+}
+
+function requestEditMode(){
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 50);
+}
+
+function closePinSheet(){
+  document.getElementById('pin-overlay').classList.remove('open');
+}
+
+function submitPin(){
+  const val = document.getElementById('pin-input').value;
+  if(val === EDIT_PIN){
+    closePinSheet();
+    setEditMode(true);
+    showStatus('Đã mở chế độ chỉnh sửa');
+  } else {
+    showStatus('Mã PIN không đúng');
+  }
+}
+
+document.getElementById('pin-input').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){ e.preventDefault(); submitPin(); }
+});
+
+document.getElementById('pin-overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'pin-overlay') closePinSheet();
+});
+
+function exitEditMode(){
+  setEditMode(false);
+  showStatus('Đã thoát chế độ chỉnh sửa');
+}
+
 function switchClass(classId){
   if(classId === currentClassId) return;
   currentClassId = classId;
@@ -705,12 +785,12 @@ function render(){
     const timeCell = document.createElement('div');
     timeCell.className = 'time-cell';
     timeCell.textContent = row.time;
-    timeCell.onclick = () => openTimeSheet(rIdx);
+    timeCell.onclick = () => { if(editMode) openTimeSheet(rIdx); };
     gridBody.appendChild(timeCell);
     for(let d=0; d<DAYS; d++){
       const cell = document.createElement('div');
       cell.className = 'day-cell' + (d === DAYS-1 ? ' last-col' : '');
-      cell.onclick = () => openSheet(rIdx, d);
+      cell.onclick = () => { if(editMode) openSheet(rIdx, d); };
       const lines = row.cells[d] || [];
       cell.innerHTML = lines.map(l => `<span class="cell-line" style="color:${levelColor(l.levelId)}">${escapeHtml(l.text)}</span>`).join('');
       gridBody.appendChild(cell);
@@ -729,26 +809,33 @@ function renderLegend(){
     item.innerHTML = `
       <span class="legend-swatch" style="background:${level.color}"></span>
       <input type="color" class="level-color-input" value="${level.color}">
-      <span class="legend-text" contenteditable="true">${escapeHtml(level.name)}</span>
-      <button class="level-del" title="Xoá trình độ">−</button>
+      <span class="legend-text" contenteditable="${editMode}">${escapeHtml(level.name)}</span>
+      ${editMode ? '<button class="level-del" title="Xoá trình độ">−</button>' : ''}
     `;
     const swatch = item.querySelector('.legend-swatch');
     const colorInput = item.querySelector('.level-color-input');
     const nameSpan = item.querySelector('.legend-text');
-    const delBtn = item.querySelector('.level-del');
-    swatch.onclick = () => colorInput.click();
-    colorInput.addEventListener('input', (e) => updateLevelColor(level.id, e.target.value));
-    nameSpan.addEventListener('blur', (e) => updateLevelName(level.id, e.target.textContent.trim()));
-    nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
-    delBtn.onclick = () => removeLevel(level.id);
+    if(editMode){
+      swatch.style.cursor = 'pointer';
+      swatch.onclick = () => colorInput.click();
+      colorInput.addEventListener('input', (e) => updateLevelColor(level.id, e.target.value));
+      nameSpan.addEventListener('blur', (e) => updateLevelName(level.id, e.target.textContent.trim()));
+      nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+      const delBtn = item.querySelector('.level-del');
+      if(delBtn) delBtn.onclick = () => removeLevel(level.id);
+    } else {
+      swatch.style.cursor = 'default';
+    }
     container.appendChild(item);
   });
-  const addBtn = document.createElement('button');
-  addBtn.className = 'level-add';
-  addBtn.textContent = '+';
-  addBtn.title = 'Thêm trình độ';
-  addBtn.onclick = addLevel;
-  container.appendChild(addBtn);
+  if(editMode){
+    const addBtn = document.createElement('button');
+    addBtn.className = 'level-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'Thêm trình độ';
+    addBtn.onclick = addLevel;
+    container.appendChild(addBtn);
+  }
 }
 
 function updateLevelColor(levelId, color){
