@@ -319,7 +319,7 @@ let currentEdit = null;
 let editMode = false;
 
 // ====== MÃ PIN ĐỂ VÀO CHẾ ĐỘ CHỈNH SỬA (đổi số này để đổi mã) ======
-const EDIT_PIN = '12358';
+const EDIT_PIN = '123456';
 // ====================================================================
 
 // ====== DANH SÁCH CÁC LỚP ======
@@ -1028,15 +1028,45 @@ async function exportImage(){
       scrollX: 0,
       scrollY: 0
     });
-    const link = document.createElement('a');
-    link.download = exportFilename();
-    link.href = canvas.toDataURL('image/png', 1.0);
-    link.click();
-    showStatus('Đã tải ảnh về máy');
+    const filename = exportFilename();
+
+    canvas.toBlob(async (blob) => {
+      if(!blob){
+        showStatus('Lỗi khi xuất ảnh');
+        el.classList.remove('exporting');
+        return;
+      }
+      const file = new File([blob], filename, { type: 'image/png' });
+
+      // Ưu tiên bảng chia sẻ (Share Sheet) nếu trình duyệt hỗ trợ — hoạt động tốt trên iPhone
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{
+          await navigator.share({ files: [file], title: filename });
+          showStatus('Đã mở bảng chia sẻ');
+        }catch(err){
+          // Người dùng bấm huỷ chia sẻ, hoặc lỗi khác — không cần báo lỗi
+          if(err && err.name !== 'AbortError'){
+            console.error(err);
+          }
+        }
+        el.classList.remove('exporting');
+        return;
+      }
+
+      // Fallback: tải file trực tiếp (hoạt động tốt trên Android/desktop)
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showStatus('Đã tải ảnh về máy');
+      el.classList.remove('exporting');
+    }, 'image/png', 1.0);
+
   }catch(e){
     showStatus('Lỗi khi xuất ảnh');
     console.error(e);
-  }finally{
     el.classList.remove('exporting');
   }
 }
