@@ -179,14 +179,27 @@
   #sheet .hint{font-size:12px;color:var(--muted);margin:0 0 12px;}
   #line-editor{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
   .line-row{display:flex;align-items:center;gap:8px;}
-  .line-row input[type=text]{
-    flex:1;padding:9px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px;
+  .input-wrap{flex:1;position:relative;}
+  .input-wrap input[type=text]{
+    width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px;
   }
+  .suggest-list{
+    position:absolute;top:100%;left:0;right:0;margin-top:3px;background:var(--cream);
+    border:1px solid var(--line);border-radius:8px;max-height:170px;overflow-y:auto;z-index:70;
+    box-shadow:0 4px 12px rgba(0,0,0,0.12);
+  }
+  .suggest-item{padding:9px 11px;font-size:14px;cursor:pointer;color:var(--ink);}
+  .suggest-item:active,.suggest-item:hover{background:#f0e6d9;}
   .color-toggle{
     width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;flex-shrink:0;
   }
   .line-row .del-line{border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;}
-  #add-line{padding:8px 12px;border-radius:8px;border:1px dashed var(--maroon);background:transparent;color:var(--maroon-dark);font-size:13px;margin-bottom:14px;width:100%;cursor:pointer;}
+  #add-line{padding:8px 12px;border-radius:8px;border:1px dashed var(--maroon);background:transparent;color:var(--maroon-dark);font-size:13px;margin-bottom:8px;width:100%;cursor:pointer;}
+  .roster-actions{display:flex;gap:8px;margin-bottom:14px;}
+  .roster-actions button{
+    flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--maroon);background:transparent;
+    color:var(--maroon-dark);font-size:13px;cursor:pointer;
+  }
   .sheet-actions{display:flex;gap:8px;}
   .sheet-actions button{flex:1;padding:11px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--maroon);}
   .sheet-actions .save{background:var(--maroon);color:#fff;}
@@ -304,6 +317,10 @@
     <p class="hint">Mỗi dòng là một học sinh. Chạm ô màu để đổi trình độ.</p>
     <div id="line-editor"></div>
     <button id="add-line" onclick="addLine()">+ Thêm học sinh</button>
+    <div class="roster-actions">
+      <button onclick="copyRoster()">📋 Copy danh sách</button>
+      <button onclick="pasteRoster()">📥 Dán danh sách</button>
+    </div>
     <div class="sheet-actions">
       <button class="cancel" onclick="closeSheet()">Huỷ</button>
       <button class="save" onclick="saveSheet()">Lưu</button>
@@ -317,6 +334,7 @@
 const DAYS = 7;
 let data = null;
 let currentEdit = null;
+let copiedRoster = null;
 let editMode = false;
 
 // ====== MÃ PIN ĐỂ VÀO CHẾ ĐỘ CHỈNH SỬA (đổi số này để đổi mã) ======
@@ -928,10 +946,92 @@ function addLineRow(text, levelId){
   const initialColor = levelColor(initialId);
   row.innerHTML = `
     <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cycleLevel(this)"></div>
-    <input type="text" value="${escapeHtml(text)}" placeholder="Tên học sinh">
+    <div class="input-wrap">
+      <input type="text" value="${escapeHtml(text)}" placeholder="Tên học sinh" autocomplete="off">
+      <div class="suggest-list"></div>
+    </div>
     <button class="del-line" onclick="this.parentElement.remove()">✕</button>
   `;
   editor.appendChild(row);
+
+  const input = row.querySelector('input[type=text]');
+  const suggestBox = row.querySelector('.suggest-list');
+
+  input.addEventListener('input', () => {
+    const pos = input.selectionStart;
+    const newVal = capitalizeWords(input.value);
+    if(newVal !== input.value){
+      input.value = newVal;
+      input.selectionStart = input.selectionEnd = pos;
+    }
+    showNameSuggestions(input, suggestBox);
+  });
+  input.addEventListener('focus', () => showNameSuggestions(input, suggestBox));
+  input.addEventListener('blur', () => {
+    setTimeout(() => { suggestBox.innerHTML = ''; }, 150);
+  });
+}
+
+function capitalizeWords(str){
+  return str.replace(/(^|\s)(\S)/g, (m, sep, ch) => sep + ch.toUpperCase());
+}
+
+function getAllKnownNames(){
+  const set = new Set();
+  (data.rows || []).forEach(row => {
+    (row.cells || []).forEach(cellArr => {
+      (cellArr || []).forEach(item => {
+        if(item && item.text) set.add(item.text);
+      });
+    });
+  });
+  return Array.from(set).sort((a,b) => a.localeCompare(b, 'vi'));
+}
+
+function showNameSuggestions(input, box){
+  const val = input.value.trim();
+  if(!val){ box.innerHTML = ''; return; }
+  const firstChar = val[0].toLowerCase();
+  const names = getAllKnownNames().filter(n =>
+    n.length > 0 && n[0].toLowerCase() === firstChar && n.toLowerCase() !== val.toLowerCase()
+  );
+  if(names.length === 0){ box.innerHTML = ''; return; }
+  box.innerHTML = names.slice(0, 6).map(n => `<div class="suggest-item">${escapeHtml(n)}</div>`).join('');
+  Array.from(box.querySelectorAll('.suggest-item')).forEach((el, i) => {
+    el.onmousedown = (e) => e.preventDefault(); // tránh input mất focus trước khi click kịp chọn
+    el.onclick = () => {
+      input.value = names[i];
+      box.innerHTML = '';
+      input.focus();
+    };
+  });
+}
+
+function copyRoster(){
+  const rows = document.querySelectorAll('#line-editor .line-row');
+  const roster = [];
+  rows.forEach(r => {
+    const text = r.querySelector('input[type=text]').value.trim();
+    if(text){
+      const levelId = r.querySelector('.color-toggle').dataset.levelId;
+      roster.push({text, levelId});
+    }
+  });
+  if(roster.length === 0){
+    showStatus('Danh sách đang trống, không có gì để copy');
+    return;
+  }
+  copiedRoster = roster;
+  showStatus(`Đã copy ${roster.length} học sinh`);
+}
+
+function pasteRoster(){
+  if(!copiedRoster || copiedRoster.length === 0){
+    showStatus('Chưa có danh sách nào được copy');
+    return;
+  }
+  copiedRoster.forEach(item => addLineRow(item.text, item.levelId));
+  showStatus(`Đã dán ${copiedRoster.length} học sinh`);
 }
 
 function addLine(){
