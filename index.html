@@ -178,16 +178,27 @@
   #sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
   #sheet .hint{font-size:12px;color:var(--muted);margin:0 0 12px;}
   #line-editor{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
-  .line-row{display:flex;align-items:center;gap:8px;}
+  .line-row{display:flex;align-items:center;gap:6px;}
+  .line-row.dragging{opacity:0.55;}
+  .drag-handle{
+    cursor:grab;color:var(--muted);font-size:20px;padding:6px 8px;flex-shrink:0;
+    touch-action:none;user-select:none;-webkit-user-select:none;line-height:1;
+  }
   .input-wrap{flex:1;position:relative;}
   .input-wrap input[type=text]{
-    width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px;
+    width:100%;padding:9px 10px;border-radius:8px;border:none;background:#f4eee1;font-size:14px;
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;outline:none;
+    box-shadow:none;-webkit-box-shadow:none;background-image:none;background-clip:padding-box;
   }
+  .input-wrap input[type=text]::-webkit-inner-spin-button,
+  .input-wrap input[type=text]::-webkit-search-decoration{display:none;}
+  .input-wrap input[type=text]:focus{background:#efe6d3;}
   .suggest-list{
     position:absolute;top:100%;left:0;right:0;margin-top:3px;background:var(--cream);
     border:1px solid var(--line);border-radius:8px;max-height:170px;overflow-y:auto;z-index:70;
     box-shadow:0 4px 12px rgba(0,0,0,0.12);
   }
+  .suggest-list:empty{display:none;border:none;margin:0;box-shadow:none;}
   .suggest-item{padding:9px 11px;font-size:14px;cursor:pointer;color:var(--ink);}
   .suggest-item:active,.suggest-item:hover{background:#f0e6d9;}
   .color-toggle{
@@ -945,9 +956,10 @@ function addLineRow(text, levelId){
   const initialId = levelId || (data.levels[0] ? data.levels[0].id : '');
   const initialColor = levelColor(initialId);
   row.innerHTML = `
+    <span class="drag-handle">⠿</span>
     <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cycleLevel(this)"></div>
     <div class="input-wrap">
-      <input type="text" value="${escapeHtml(text)}" placeholder="Tên học sinh" autocomplete="off">
+      <input type="text" value="${escapeHtml(text)}" placeholder="Tên học sinh" autocomplete="off" enterkeyhint="next">
       <div class="suggest-list"></div>
     </div>
     <button class="del-line" onclick="this.parentElement.remove()">✕</button>
@@ -970,6 +982,75 @@ function addLineRow(text, levelId){
   input.addEventListener('blur', () => {
     setTimeout(() => { suggestBox.innerHTML = ''; }, 150);
   });
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      suggestBox.innerHTML = '';
+      addLine();
+      const allInputs = document.querySelectorAll('#line-editor .line-row input[type=text]');
+      const last = allInputs[allInputs.length - 1];
+      if(last) last.focus();
+    }
+  });
+
+  makeRowDraggable(row);
+}
+
+function makeRowDraggable(row){
+  const handle = row.querySelector('.drag-handle');
+  let dragging = false;
+
+  function getY(e){
+    if(e.touches && e.touches.length) return e.touches[0].clientY;
+    if(e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientY;
+    return e.clientY;
+  }
+
+  function onMove(e){
+    if(!dragging) return;
+    if(e.cancelable) e.preventDefault();
+    const editor = document.getElementById('line-editor');
+    const siblings = Array.from(editor.querySelectorAll('.line-row')).filter(r => r !== row);
+    const y = getY(e);
+    let inserted = false;
+    for(const sib of siblings){
+      const rect = sib.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if(y < mid){
+        editor.insertBefore(row, sib);
+        inserted = true;
+        break;
+      }
+    }
+    if(!inserted){
+      editor.appendChild(row);
+    }
+  }
+
+  function onEnd(){
+    if(!dragging) return;
+    dragging = false;
+    row.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('touchcancel', onEnd);
+  }
+
+  function onStart(e){
+    dragging = true;
+    row.classList.add('dragging');
+    if(e.cancelable) e.preventDefault();
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onEnd);
+  }
+
+  handle.addEventListener('mousedown', onStart);
+  handle.addEventListener('touchstart', onStart, {passive:false});
 }
 
 function capitalizeWords(str){
