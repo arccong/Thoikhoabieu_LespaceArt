@@ -1072,23 +1072,26 @@ function capitalizeWords(str){
 }
 
 function getAllKnownNames(){
-  const set = new Set();
+  const map = new Map(); // key: tên đã bỏ hết khoảng trắng, value: tên gốc (giữ bản xuất hiện đầu tiên)
   (data.rows || []).forEach(row => {
     (row.cells || []).forEach(cellArr => {
       (cellArr || []).forEach(item => {
-        if(item && item.text) set.add(item.text);
+        if(item && item.text){
+          const key = item.text.replace(/\s+/g, '');
+          if(!map.has(key)) map.set(key, item.text);
+        }
       });
     });
   });
-  return Array.from(set).sort((a,b) => a.localeCompare(b, 'vi'));
+  return Array.from(map.values()).sort((a,b) => a.localeCompare(b, 'vi'));
 }
 
 function showNameSuggestions(input, box){
   const val = input.value.trim();
   if(!val){ box.innerHTML = ''; return; }
-  const firstChar = val[0].toLowerCase();
+  const query = val.toLowerCase();
   const names = getAllKnownNames().filter(n =>
-    n.length > 0 && n[0].toLowerCase() === firstChar && n.toLowerCase() !== val.toLowerCase()
+    n.length > 0 && n.toLowerCase().startsWith(query) && n.toLowerCase() !== query
   );
   if(names.length === 0){ box.innerHTML = ''; return; }
   box.innerHTML = names.slice(0, 6).map(n => `<div class="suggest-item">${escapeHtml(n)}</div>`).join('');
