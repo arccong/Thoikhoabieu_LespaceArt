@@ -22,6 +22,8 @@
     --header-bg:#ece1cf;
     --day-header-bg:#743b1f;
     --day-header-line:#8d5136;
+    --header-text-color:#6e2c31;
+    --day-header-text-color:#fbf8f4;
     --time-color:#743b1f;
     --time-cell-bg:#f8f4ef;
     --cell-bg:#fefbf7;
@@ -61,27 +63,27 @@
   .header-left{display:flex;flex-direction:column;gap:3px;flex:1;min-width:200px;}
   #orgName{
     font-family:'Work Sans',sans-serif;font-weight:700;font-size:14px;line-height:1.6;
-    letter-spacing:1.5px;color:var(--maroon-dark);text-transform:uppercase;outline:none;
+    letter-spacing:1.5px;color:var(--header-text-color);text-transform:uppercase;outline:none;
   }
   #title{
-    font-family:'Libre Baskerville',Georgia,serif;font-weight:700;color:var(--maroon-dark);
+    font-family:'Libre Baskerville',Georgia,serif;font-weight:700;color:var(--header-text-color);
     font-size:34px;outline:none;line-height:1.35;padding-top:4px;
   }
   #monthYear{
-    font-family:'Libre Baskerville',Georgia,serif;font-style:italic;font-weight:700;font-size:19.5px;color:var(--maroon);
+    font-family:'Libre Baskerville',Georgia,serif;font-style:italic;font-weight:700;font-size:19.5px;color:var(--header-text-color);
     outline:none;line-height:1.6;
   }
   .header-right{text-align:right;flex-shrink:0;}
   .updated-label{
-    font-size:13.5px;font-weight:700;letter-spacing:1.5px;color:var(--maroon-dark);text-transform:uppercase;
+    font-size:13.5px;font-weight:700;letter-spacing:1.5px;color:var(--header-text-color);text-transform:uppercase;
   }
   #updated-date{
-    font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:21px;color:var(--maroon-dark);
+    font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:21px;color:var(--header-text-color);
     margin-top:3px;white-space:nowrap;
   }
   .schedule-grid{display:grid;grid-template-columns:88px repeat(7,80px);}
   .day-header{
-    background:var(--day-header-bg);color:#fbf8f4;text-align:center;font-size:15.5px;letter-spacing:0.09em;
+    background:var(--day-header-bg);color:var(--day-header-text-color);text-align:center;font-size:15.5px;letter-spacing:0.09em;
     font-weight:700;padding:16px 6px;text-transform:uppercase;border-left:1px solid var(--day-header-line);
   }
   .day-header.corner{background:var(--day-header-bg);border-left:none;}
@@ -315,8 +317,20 @@
       <input type="color" id="theme-header-bg">
     </div>
     <div class="theme-row">
+      <span>Chữ khối tiêu đề</span>
+      <input type="color" id="theme-header-text">
+    </div>
+    <div class="theme-row">
       <span>Thanh ngày trong tuần</span>
       <input type="color" id="theme-day-header-bg">
+    </div>
+    <div class="theme-row">
+      <span>Chữ ngày trong tuần</span>
+      <input type="color" id="theme-day-header-text">
+    </div>
+    <div class="theme-row">
+      <span>Chữ khung giờ</span>
+      <input type="color" id="theme-time-color">
     </div>
     <div class="sheet-actions">
       <button class="cancel" onclick="closeThemeSheet()">Huỷ</button>
@@ -407,7 +421,7 @@ function defaultDataFor(classId){
       title: "Thời khoá biểu lớp Múa",
       monthYear: "Tháng 7, 2026",
       updatedDate: "02/07/2026",
-      theme: { headerBg:'#f3e6ee', dayHeaderBg:'#7a2e4d' },
+      theme: { headerBg:'#f3e6ee', headerTextColor:'#6e2c31', dayHeaderBg:'#7a2e4d', dayHeaderTextColor:'#fbf8f4', timeColor:'#7a2e4d' },
       levels: defaultLevels(),
       rows: emptyTemplateRows()
     };
@@ -418,7 +432,7 @@ function defaultDataFor(classId){
       title: "Thời khoá biểu lớp Vẽ",
       monthYear: "Tháng 7, 2026",
       updatedDate: "02/07/2026",
-      theme: { headerBg:'#e5edf0', dayHeaderBg:'#264a5c' },
+      theme: { headerBg:'#e5edf0', headerTextColor:'#6e2c31', dayHeaderBg:'#264a5c', dayHeaderTextColor:'#fbf8f4', timeColor:'#264a5c' },
       levels: defaultLevels(),
       rows: emptyTemplateRows()
     };
@@ -433,7 +447,7 @@ function defaultDataFor(classId){
     title: "Thời khoá biểu lớp Piano",
     monthYear: "Tháng 7, 2026",
     updatedDate: "02/07/2026",
-    theme: { headerBg:'#ece1cf', dayHeaderBg:'#743b1f' },
+    theme: { headerBg:'#ece1cf', headerTextColor:'#6e2c31', dayHeaderBg:'#743b1f', dayHeaderTextColor:'#fbf8f4', timeColor:'#743b1f' },
     levels: defaultLevels(),
     rows: [
       {time:"9:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
@@ -478,7 +492,7 @@ function migrateData(loaded, classId){
     title: loaded.title ?? def.title,
     monthYear: loaded.monthYear ?? def.monthYear,
     updatedDate: updatedDate ?? def.updatedDate,
-    theme: loaded.theme ?? def.theme,
+    theme: { ...def.theme, ...(loaded.theme || {}) },
     levels,
     rows: migrateRows(loaded.rows ?? def.rows, levels[0]?.id)
   };
@@ -627,14 +641,19 @@ function applyTheme(theme){
   if(!theme) return;
   const root = document.documentElement.style;
   root.setProperty('--header-bg', theme.headerBg);
+  root.setProperty('--header-text-color', theme.headerTextColor);
   root.setProperty('--day-header-bg', theme.dayHeaderBg);
   root.setProperty('--day-header-line', lighten(theme.dayHeaderBg, 15));
-  root.setProperty('--time-color', theme.dayHeaderBg);
+  root.setProperty('--day-header-text-color', theme.dayHeaderTextColor);
+  root.setProperty('--time-color', theme.timeColor);
 }
 
 function openThemeSheet(){
   document.getElementById('theme-header-bg').value = data.theme.headerBg;
+  document.getElementById('theme-header-text').value = data.theme.headerTextColor;
   document.getElementById('theme-day-header-bg').value = data.theme.dayHeaderBg;
+  document.getElementById('theme-day-header-text').value = data.theme.dayHeaderTextColor;
+  document.getElementById('theme-time-color').value = data.theme.timeColor;
   document.getElementById('theme-sheet-overlay').classList.add('open');
 }
 
@@ -644,7 +663,10 @@ function closeThemeSheet(){
 
 function saveThemeSheet(){
   data.theme.headerBg = document.getElementById('theme-header-bg').value;
+  data.theme.headerTextColor = document.getElementById('theme-header-text').value;
   data.theme.dayHeaderBg = document.getElementById('theme-day-header-bg').value;
+  data.theme.dayHeaderTextColor = document.getElementById('theme-day-header-text').value;
+  data.theme.timeColor = document.getElementById('theme-time-color').value;
   applyTheme(data.theme);
   bumpUpdated();
   render();
@@ -825,7 +847,7 @@ function render(){
       cell.className = 'day-cell' + (d === DAYS-1 ? ' last-col' : '');
       cell.onclick = () => { if(editMode) openSheet(rIdx, d); };
       const lines = row.cells[d] || [];
-      cell.innerHTML = lines.map(l => `<span class="cell-line" style="color:${levelColor(l.levelId)}">${escapeHtml(l.text)}</span>`).join('');
+      cell.innerHTML = lines.map(l => `<span class="cell-line" data-level-id="${l.levelId}" style="color:${levelColor(l.levelId)}">${escapeHtml(l.text)}</span>`).join('');
       gridBody.appendChild(cell);
     }
   });
@@ -855,7 +877,19 @@ function renderLegend(){
     if(editMode){
       swatch.style.cursor = 'pointer';
       swatch.onclick = () => colorInput.click();
-      colorInput.addEventListener('input', (e) => updateLevelColor(level.id, e.target.value));
+      colorInput.addEventListener('input', (e) => {
+        // Cập nhật trực tiếp, KHÔNG render lại toàn bộ (nếu không bảng chọn màu của trình duyệt sẽ tự đóng)
+        const lvl = data.levels.find(l => l.id === level.id);
+        if(lvl) lvl.color = e.target.value;
+        swatch.style.background = e.target.value;
+        document.querySelectorAll(`.cell-line[data-level-id="${level.id}"]`).forEach(el => {
+          el.style.color = e.target.value;
+        });
+      });
+      colorInput.addEventListener('change', (e) => {
+        // Khi người dùng chọn xong màu (đóng bảng chọn màu), mới lưu và render lại đầy đủ
+        updateLevelColor(level.id, e.target.value);
+      });
       nameSpan.addEventListener('blur', (e) => updateLevelName(level.id, e.target.textContent.trim()));
       nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
       const delBtn = item.querySelector('.level-del');
