@@ -25,7 +25,7 @@
     --header-text-color:#6e2c31;
     --day-header-text-color:#fbf8f4;
     --time-color:#743b1f;
-    --time-cell-bg:#f8f4ef;
+    --time-cell-bg:#f0eae0;
     --cell-bg:#fefbf7;
     --row-border:#e6dcd4;
     --gap-bg:#e8dbd1;
@@ -81,7 +81,7 @@
     font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:21px;color:var(--header-text-color);
     margin-top:3px;white-space:nowrap;
   }
-  .schedule-grid{display:grid;grid-template-columns:88px repeat(7,80px);}
+  .schedule-grid{display:grid;grid-template-columns:88px repeat(7,80px);width:100%;}
   .day-header{
     background:var(--day-header-bg);color:var(--day-header-text-color);text-align:center;font-size:15.5px;letter-spacing:0.09em;
     font-weight:700;padding:16px 6px;text-transform:uppercase;border-left:1px solid var(--day-header-line);
@@ -89,8 +89,8 @@
   .day-header.corner{background:var(--day-header-bg);border-left:none;}
   .day-header:last-child{border-right:1px solid var(--day-header-line);}
   .time-cell{
-    background:var(--time-cell-bg);border-top:1px solid var(--row-border);font-family:'Work Sans',sans-serif;
-    font-weight:700;font-size:18px;color:var(--time-color);padding:14px 10px;display:flex;
+    background:var(--day-header-bg);border-top:1px solid var(--row-border);font-family:'Work Sans',sans-serif;
+    font-weight:700;font-size:15.5px;color:var(--day-header-text-color);padding:14px 10px;display:flex;
     align-items:center;justify-content:center;text-align:center;
     cursor:pointer;white-space:nowrap;
   }
@@ -152,6 +152,10 @@
   #theme-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
   .theme-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-size:14px;}
   .theme-row input[type=color]{width:44px;height:34px;border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;}
+  #theme-reset-btn{
+    width:100%;margin-top:6px;margin-bottom:16px;padding:10px;border-radius:10px;border:1px dashed var(--maroon);background:transparent;
+    color:var(--maroon-dark);font-size:13px;font-weight:600;cursor:pointer;
+  }
   #pin-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
   }
@@ -321,17 +325,14 @@
       <input type="color" id="theme-header-text">
     </div>
     <div class="theme-row">
-      <span>Thanh ngày trong tuần</span>
+      <span>Nền thanh ngày + cột giờ</span>
       <input type="color" id="theme-day-header-bg">
     </div>
     <div class="theme-row">
-      <span>Chữ ngày trong tuần</span>
+      <span>Chữ ngày trong tuần + khung giờ</span>
       <input type="color" id="theme-day-header-text">
     </div>
-    <div class="theme-row">
-      <span>Chữ khung giờ</span>
-      <input type="color" id="theme-time-color">
-    </div>
+    <button id="theme-reset-btn" onclick="resetThemeToDefault()">Màu mặc định</button>
     <div class="sheet-actions">
       <button class="cancel" onclick="closeThemeSheet()">Huỷ</button>
       <button class="save" onclick="saveThemeSheet()">Lưu</button>
@@ -421,7 +422,7 @@ function defaultDataFor(classId){
       title: "Thời khoá biểu lớp Múa",
       monthYear: "Tháng 7, 2026",
       updatedDate: "02/07/2026",
-      theme: { headerBg:'#f3e6ee', headerTextColor:'#6e2c31', dayHeaderBg:'#7a2e4d', dayHeaderTextColor:'#fbf8f4', timeColor:'#7a2e4d' },
+      theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
       rows: emptyTemplateRows()
     };
@@ -432,7 +433,7 @@ function defaultDataFor(classId){
       title: "Thời khoá biểu lớp Vẽ",
       monthYear: "Tháng 7, 2026",
       updatedDate: "02/07/2026",
-      theme: { headerBg:'#e5edf0', headerTextColor:'#6e2c31', dayHeaderBg:'#264a5c', dayHeaderTextColor:'#fbf8f4', timeColor:'#264a5c' },
+      theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
       rows: emptyTemplateRows()
     };
@@ -447,7 +448,7 @@ function defaultDataFor(classId){
     title: "Thời khoá biểu lớp Piano",
     monthYear: "Tháng 7, 2026",
     updatedDate: "02/07/2026",
-    theme: { headerBg:'#ece1cf', headerTextColor:'#6e2c31', dayHeaderBg:'#743b1f', dayHeaderTextColor:'#fbf8f4', timeColor:'#743b1f' },
+    theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
     levels: defaultLevels(),
     rows: [
       {time:"9:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
@@ -512,17 +513,30 @@ function storageKeyFor(classId){
 function subscribeClass(classId){
   if(FIREBASE_ENABLED && db){
     db.collection('piano').doc(CLASS_DOC_MAP[classId]).onSnapshot(async (doc) => {
-      let newData;
       if(doc.exists){
         const raw = doc.data();
         let rows = [];
         try{ rows = JSON.parse(raw.rowsJson || '[]'); }catch(e){ rows = []; }
-        newData = migrateData({...raw, rows}, classId);
-      } else {
-        newData = defaultDataFor(classId);
-        try{ await saveClassToFirestore(classId, newData); }
-        catch(e){ console.error('Firestore init error', e); }
+        const newData = migrateData({...raw, rows}, classId);
+        dataByClass[classId] = newData;
+        if(classId === currentClassId){
+          data = newData;
+          applyTheme(data.theme);
+          render();
+        }
+        return;
       }
+      // doc.exists === false: có thể là "chưa từng có dữ liệu" THẬT, hoặc chỉ là
+      // bản nháp rỗng tạm thời từ cache cục bộ trước khi dữ liệu thật kịp tải về.
+      // Chỉ tạo dữ liệu mặc định khi Firebase đã XÁC NHẬN với máy chủ (không phải từ cache),
+      // để tránh ghi đè mất dữ liệu thật đã lưu trước đó.
+      if(doc.metadata.fromCache){
+        console.warn('Bản nháp rỗng tạm thời từ cache cho lớp ' + classId + ', chờ dữ liệu thật từ máy chủ...');
+        return;
+      }
+      const newData = defaultDataFor(classId);
+      try{ await saveClassToFirestore(classId, newData); }
+      catch(e){ console.error('Firestore init error', e); }
       dataByClass[classId] = newData;
       if(classId === currentClassId){
         data = newData;
@@ -645,15 +659,20 @@ function applyTheme(theme){
   root.setProperty('--day-header-bg', theme.dayHeaderBg);
   root.setProperty('--day-header-line', lighten(theme.dayHeaderBg, 15));
   root.setProperty('--day-header-text-color', theme.dayHeaderTextColor);
-  root.setProperty('--time-color', theme.timeColor);
 }
+
+const DEFAULT_THEME = {
+  headerBg: '#EDE1D3',
+  headerTextColor: '#743B1F',
+  dayHeaderBg: '#F6F0E8',
+  dayHeaderTextColor: '#743B1F'
+};
 
 function openThemeSheet(){
   document.getElementById('theme-header-bg').value = data.theme.headerBg;
   document.getElementById('theme-header-text').value = data.theme.headerTextColor;
   document.getElementById('theme-day-header-bg').value = data.theme.dayHeaderBg;
   document.getElementById('theme-day-header-text').value = data.theme.dayHeaderTextColor;
-  document.getElementById('theme-time-color').value = data.theme.timeColor;
   document.getElementById('theme-sheet-overlay').classList.add('open');
 }
 
@@ -666,13 +685,29 @@ function saveThemeSheet(){
   data.theme.headerTextColor = document.getElementById('theme-header-text').value;
   data.theme.dayHeaderBg = document.getElementById('theme-day-header-bg').value;
   data.theme.dayHeaderTextColor = document.getElementById('theme-day-header-text').value;
-  data.theme.timeColor = document.getElementById('theme-time-color').value;
   applyTheme(data.theme);
   bumpUpdated();
   render();
   saveData();
   closeThemeSheet();
   showStatus('Đã lưu màu sắc');
+}
+
+function resetThemeToDefault(){
+  document.getElementById('theme-header-bg').value = DEFAULT_THEME.headerBg;
+  document.getElementById('theme-header-text').value = DEFAULT_THEME.headerTextColor;
+  document.getElementById('theme-day-header-bg').value = DEFAULT_THEME.dayHeaderBg;
+  document.getElementById('theme-day-header-text').value = DEFAULT_THEME.dayHeaderTextColor;
+  data.theme.headerBg = DEFAULT_THEME.headerBg;
+  data.theme.headerTextColor = DEFAULT_THEME.headerTextColor;
+  data.theme.dayHeaderBg = DEFAULT_THEME.dayHeaderBg;
+  data.theme.dayHeaderTextColor = DEFAULT_THEME.dayHeaderTextColor;
+  applyTheme(data.theme);
+  bumpUpdated();
+  render();
+  saveData();
+  closeThemeSheet();
+  showStatus('Đã đặt lại màu mặc định');
 }
 
 function setEditMode(on){
@@ -820,7 +855,7 @@ function applyColumnWidths(){
     }
   });
   const grid = document.getElementById('schedule-grid');
-  grid.style.gridTemplateColumns = '88px ' + widths.map(w => Math.ceil(w) + 'px').join(' ');
+  grid.style.gridTemplateColumns = '88px ' + widths.map(w => `minmax(${Math.ceil(w)}px, 1fr)`).join(' ');
 }
 
 function render(){
