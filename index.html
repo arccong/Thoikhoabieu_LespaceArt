@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>L'espace Art - Thời khoá biểu các lớp</title>
+<title>Thời khoá biểu lớp Piano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -37,6 +37,21 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;font-family:'Work Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f2eae1;color:var(--ink);}
   #app{max-width:1100px;margin:0 auto;padding:14px 10px 90px;}
+  .view-tabs{display:flex;gap:8px;margin-bottom:10px;}
+  .view-tab-btn{
+    flex:1;padding:12px 8px;border-radius:10px;border:1px solid var(--maroon);
+    background:var(--cream);color:var(--maroon-dark);font-size:14px;font-weight:700;cursor:pointer;
+  }
+  .view-tab-btn.active{background:var(--maroon);color:#fff;}
+  .admissions-cell{align-items:center;justify-content:center;text-align:center;}
+  #admissions-capture-area{background:var(--cell-bg);padding:0;display:inline-block;vertical-align:top;}
+  #admissions-capture-area.exporting .cap-footer,
+  #admissions-capture-area.exporting .level-del,
+  #admissions-capture-area.exporting .level-add{display:none !important;}
+  #btn-reset-status{
+    width:100%;margin-top:14px;padding:12px;border-radius:10px;border:1px dashed var(--maroon);background:transparent;
+    color:var(--maroon-dark);font-size:13px;font-weight:600;cursor:pointer;
+  }
   .class-select{
     flex:1;min-width:140px;padding:11px 12px;border-radius:10px;border:1px solid var(--maroon);
     background:var(--cream);color:var(--maroon-dark);font-size:14px;font-weight:600;cursor:pointer;
@@ -61,15 +76,15 @@
   .cap-header{background:var(--header-bg);padding:20px 48px 18px;}
   .header-flex{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;}
   .header-left{display:flex;flex-direction:column;gap:3px;flex:1;min-width:200px;}
-  #orgName{
+  #orgName, #adm-orgName{
     font-family:'Work Sans',sans-serif;font-weight:700;font-size:14px;line-height:1.6;
     letter-spacing:1.5px;color:var(--header-text-color);text-transform:uppercase;outline:none;
   }
-  #title{
+  #title, #adm-title{
     font-family:'Libre Baskerville',Georgia,serif;font-weight:700;color:var(--header-text-color);
     font-size:34px;outline:none;line-height:1.35;padding-top:4px;
   }
-  #monthYear{
+  #monthYear, #adm-monthYear{
     font-family:'Libre Baskerville',Georgia,serif;font-style:italic;font-weight:700;font-size:19.5px;color:var(--header-text-color);
     outline:none;line-height:1.6;
   }
@@ -77,7 +92,7 @@
   .updated-label{
     font-size:13.5px;font-weight:700;letter-spacing:1.5px;color:var(--header-text-color);text-transform:uppercase;
   }
-  #updated-date{
+  #updated-date, #adm-updated-date{
     font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:21px;color:var(--header-text-color);
     margin-top:3px;white-space:nowrap;
   }
@@ -156,6 +171,20 @@
     width:100%;margin-top:6px;margin-bottom:16px;padding:10px;border-radius:10px;border:1px dashed var(--maroon);background:transparent;
     color:var(--maroon-dark);font-size:13px;font-weight:600;cursor:pointer;
   }
+  #status-sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
+  }
+  #status-sheet-overlay.open{display:flex;}
+  #status-sheet{
+    background:var(--cream);width:100%;max-width:420px;border-radius:16px 16px 0 0;padding:16px 18px 22px;
+    max-height:80vh;overflow-y:auto;
+  }
+  #status-sheet h3{margin:0 0 4px;font-size:15px;color:var(--maroon-dark);}
+  .status-option-btn{
+    display:block;width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:1.5px solid var(--line);
+    background:transparent;font-size:14px;font-weight:700;cursor:pointer;text-align:center;
+  }
+  .status-option-btn.auto{border-style:dashed;color:var(--maroon-dark);border-color:var(--maroon);font-weight:600;}
   #pin-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
   }
@@ -233,10 +262,15 @@
   body.view-mode .time-cell,
   body.view-mode .day-cell{cursor:default;}
   body.view-mode .cap-footer{display:none;}
+  body.view-mode #btn-reset-status{display:none;}
 </style>
 </head>
 <body class="view-mode">
 <div id="app">
+  <div class="view-tabs" id="view-tabs">
+    <button class="view-tab-btn active" data-view="schedule" onclick="switchView('schedule')">Thời khoá biểu</button>
+    <button class="view-tab-btn" data-view="admissions" onclick="switchView('admissions')">Lịch tuyển sinh</button>
+  </div>
   <div class="toolbar" id="toolbar-main">
     <select id="class-select" class="class-select">
       <option value="piano">Lớp Piano</option>
@@ -248,6 +282,7 @@
     <button id="btn-exit-edit" onclick="exitEditMode()" style="display:none;">Thoát</button>
   </div>
 
+  <div id="view-schedule">
   <div class="capture-scroll">
   <div id="capture-area">
     <div class="cap-header">
@@ -277,6 +312,41 @@
     <div class="legend-row" id="legend-row"></div>
     <div class="cap-footer">Chạm vào ô để chỉnh sửa</div>
   </div>
+  </div>
+  </div>
+
+  <div id="view-admissions" style="display:none;">
+  <div class="capture-scroll">
+  <div id="admissions-capture-area">
+    <div class="cap-header">
+      <div class="header-flex">
+        <div class="header-left">
+          <div id="adm-orgName"></div>
+          <div id="adm-title"></div>
+          <div id="adm-monthYear"></div>
+        </div>
+        <div class="header-right">
+          <div class="updated-label">Cập nhật</div>
+          <div id="adm-updated-date"></div>
+        </div>
+      </div>
+    </div>
+    <div class="schedule-grid" id="admissions-grid">
+      <div class="day-header corner"></div>
+      <div class="day-header">THỨ 2</div>
+      <div class="day-header">THỨ 3</div>
+      <div class="day-header">THỨ 4</div>
+      <div class="day-header">THỨ 5</div>
+      <div class="day-header">THỨ 6</div>
+      <div class="day-header">THỨ 7</div>
+      <div class="day-header">CN</div>
+      <div id="admissions-grid-body" style="display:contents;"></div>
+    </div>
+    <div class="legend-row" id="admissions-legend-row"></div>
+    <div class="cap-footer">Chạm vào ô để chỉnh trạng thái</div>
+  </div>
+  </div>
+  <button id="btn-reset-status" style="display:none;" onclick="resetAllStatusOverrides()">🔄 Reset trạng thái theo quy tắc</button>
   </div>
 
 </div>
@@ -340,6 +410,17 @@
   </div>
 </div>
 
+<div id="status-sheet-overlay">
+  <div id="status-sheet">
+    <h3 id="status-sheet-title">Chỉnh trạng thái</h3>
+    <p class="hint">Chọn trạng thái cho ca học này.</p>
+    <div id="status-options"></div>
+    <div class="sheet-actions">
+      <button class="cancel" onclick="closeStatusSheet()">Đóng</button>
+    </div>
+  </div>
+</div>
+
 <div id="sheet-overlay">
   <div id="sheet">
     <h3 id="sheet-title">Chỉnh sửa ô</h3>
@@ -398,13 +479,14 @@ if(FIREBASE_ENABLED){
 // =================================================================
 
 function emptyTemplateRows(){
+  const blank = () => new Array(DAYS).fill(null);
   return [
-    {time:"9:00", cells: Array.from({length:DAYS}, () => [])},
-    {time:"10:00", cells: Array.from({length:DAYS}, () => [])},
+    {time:"9:00", cells: Array.from({length:DAYS}, () => []), statusOverride: blank()},
+    {time:"10:00", cells: Array.from({length:DAYS}, () => []), statusOverride: blank()},
     {time:"", cells: Array.from({length:DAYS}, () => []), spacer:true},
-    {time:"16:00", cells: Array.from({length:DAYS}, () => [])},
-    {time:"17:00", cells: Array.from({length:DAYS}, () => [])},
-    {time:"18:00", cells: Array.from({length:DAYS}, () => [])}
+    {time:"16:00", cells: Array.from({length:DAYS}, () => []), statusOverride: blank()},
+    {time:"17:00", cells: Array.from({length:DAYS}, () => []), statusOverride: blank()},
+    {time:"18:00", cells: Array.from({length:DAYS}, () => []), statusOverride: blank()}
   ];
 }
 
@@ -412,6 +494,14 @@ function defaultLevels(){
   return [
     {id:'lvl-red', name:'Trình độ mới - sơ cấp', color:'#d40924'},
     {id:'lvl-black', name:'Trình độ nâng cao', color:'#27201a'}
+  ];
+}
+
+function defaultAdmissionLabels(){
+  return [
+    {key:'full', text:'Full', color:'#c0392b'},
+    {key:'near', text:'Tuyển sinh (1)', color:'#c98a1a'},
+    {key:'open', text:'Tuyển sinh (2)', color:'#2e7d32'}
   ];
 }
 
@@ -424,6 +514,7 @@ function defaultDataFor(classId){
       updatedDate: "02/07/2026",
       theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
+      admissionLabels: defaultAdmissionLabels(),
       rows: emptyTemplateRows()
     };
   }
@@ -435,6 +526,7 @@ function defaultDataFor(classId){
       updatedDate: "02/07/2026",
       theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
+      admissionLabels: defaultAdmissionLabels(),
       rows: emptyTemplateRows()
     };
   }
@@ -450,16 +542,17 @@ function defaultDataFor(classId){
     updatedDate: "02/07/2026",
     theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
     levels: defaultLevels(),
+    admissionLabels: defaultAdmissionLabels(),
     rows: [
-      {time:"9:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
-      {time:"9:30", cells:[mk(),mk(),mk(),mk(),mk(),mk("Ngọc Khánh (2ca)","*Đan Linh","Yến Mai (2ca)"),mk()]},
-      {time:"10:00", cells:[mk(),mk(),mk(),mk("*Lee An","Gia Khôi","*Quang Minh"),mk(),mk(),mk("*Trường An")]},
+      {time:"9:00", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
+      {time:"9:30", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk(),mk(),mk(),mk(),mk("Ngọc Khánh (2ca)","*Đan Linh","Yến Mai (2ca)"),mk()]},
+      {time:"10:00", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk(),mk(),mk("*Lee An","Gia Khôi","*Quang Minh"),mk(),mk(),mk("*Trường An")]},
       {time:"", cells:[mk(),mk(),mk(),mk(),mk(),mk(),mk()], spacer:true},
-      {time:"16:00", cells:[mk(),mk(),mk(),mk(),mk(),mk("*Tú Linh","*Như Ý"),mk("*Tú Linh","*Như")]},
-      {time:"17:00", cells:[mk(),mk("*Đình Phúc","*Như Thảo"),mk("*Nhật Linh","*Khánh Hà"),mk("*Đình Phúc","*Như Thảo","*An Nhiên"),mk("*Nhật Linh","*Khánh Hà","T. Phương (2ca)"),mk("*Gia Hân","*An Nhiên Dâu"),mk("*An Nhiên Dâu")]},
-      {time:"17:30", cells:[mk(),mk("*Thiện Nhân","Kim Sa"),mk("*Thiện Nhân","Gia Khôi","Minh Anh"),mk("Kim Sa","Minh Anh"),mk(),mk("*Gia Bình (1,5ca)"),mk("*Gia Bình (1,5 ca)")]},
-      {time:"18:00", cells:[mk("*An Nhiên","Anh Thư","*Gia Huy Rô"),mk("*Hà My"),mk("*Tuệ Mẫn"),mk("*Lee An","*Gia Huy Rô"),mk("*Gia Hân","*Hà My","*Tuệ Mẫn"),mk(),mk()]},
-      {time:"19:00", cells:[mk("*Hạ Vi","Mỹ Anh Thỏ","Hồng Anh Mía","Minh Duy","Quang Minh"),mk("Minh Châu","Mỹ Anh Thỏ","Hồng Anh Mía"),mk(),mk("*Hạ Vi","*Đan Linh","*Minh Châu","*Minh Duy"),mk(),mk(),mk()]}
+      {time:"16:00", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk(),mk(),mk(),mk(),mk("*Tú Linh","*Như Ý"),mk("*Tú Linh","*Như")]},
+      {time:"17:00", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk("*Đình Phúc","*Như Thảo"),mk("*Nhật Linh","*Khánh Hà"),mk("*Đình Phúc","*Như Thảo","*An Nhiên"),mk("*Nhật Linh","*Khánh Hà","T. Phương (2ca)"),mk("*Gia Hân","*An Nhiên Dâu"),mk("*An Nhiên Dâu")]},
+      {time:"17:30", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk("*Thiện Nhân","Kim Sa"),mk("*Thiện Nhân","Gia Khôi","Minh Anh"),mk("Kim Sa","Minh Anh"),mk(),mk("*Gia Bình (1,5ca)"),mk("*Gia Bình (1,5 ca)")]},
+      {time:"18:00", statusOverride:new Array(DAYS).fill(null), cells:[mk("*An Nhiên","Anh Thư","*Gia Huy Rô"),mk("*Hà My"),mk("*Tuệ Mẫn"),mk("*Lee An","*Gia Huy Rô"),mk("*Gia Hân","*Hà My","*Tuệ Mẫn"),mk(),mk()]},
+      {time:"19:00", statusOverride:new Array(DAYS).fill(null), cells:[mk("*Hạ Vi","Mỹ Anh Thỏ","Hồng Anh Mía","Minh Duy","Quang Minh"),mk("Minh Châu","Mỹ Anh Thỏ","Hồng Anh Mía"),mk(),mk("*Hạ Vi","*Đan Linh","*Minh Châu","*Minh Duy"),mk(),mk(),mk()]}
     ]
   };
 }
@@ -467,6 +560,9 @@ function defaultDataFor(classId){
 function migrateRows(rows, fallbackId){
   return rows.map(row => ({
     ...row,
+    statusOverride: row.statusOverride && row.statusOverride.length === DAYS
+      ? row.statusOverride
+      : new Array(DAYS).fill(null),
     cells: (row.cells || []).map(cellArr => (cellArr || []).map(item => {
       if(item.levelId) return {text:item.text, levelId:item.levelId};
       const levelId = item.color === 'red' ? 'lvl-red' : (item.color === 'black' ? 'lvl-black' : fallbackId);
@@ -488,6 +584,13 @@ function migrateData(loaded, classId){
       {id:'lvl-black', name: loaded.legendBlack ?? def.levels[1].name, color: def.levels[1].color}
     ];
   }
+  let admissionLabels = loaded.admissionLabels;
+  if(!admissionLabels || admissionLabels.length !== 3){
+    admissionLabels = def.admissionLabels.map(defLabel => {
+      const found = (loaded.admissionLabels || []).find(l => l.key === defLabel.key);
+      return found ? { key: defLabel.key, text: found.text, color: found.color } : defLabel;
+    });
+  }
   return {
     orgName: loaded.orgName ?? def.orgName,
     title: loaded.title ?? def.title,
@@ -495,6 +598,7 @@ function migrateData(loaded, classId){
     updatedDate: updatedDate ?? def.updatedDate,
     theme: { ...def.theme, ...(loaded.theme || {}) },
     levels,
+    admissionLabels,
     rows: migrateRows(loaded.rows ?? def.rows, levels[0]?.id)
   };
 }
@@ -716,6 +820,7 @@ function setEditMode(on){
   document.getElementById('btn-request-edit').style.display = on ? 'none' : '';
   document.getElementById('btn-theme').style.display = on ? '' : 'none';
   document.getElementById('btn-exit-edit').style.display = on ? '' : 'none';
+  document.getElementById('btn-reset-status').style.display = on ? '' : 'none';
   ['orgName','title','monthYear'].forEach(id => {
     document.getElementById(id).contentEditable = on ? 'true' : 'false';
   });
@@ -774,6 +879,19 @@ document.getElementById('class-select').addEventListener('change', (e) => {
   switchClass(e.target.value);
 });
 
+let currentView = 'schedule';
+
+function switchView(view){
+  if(view === currentView) return;
+  currentView = view;
+  document.querySelectorAll('.view-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  document.getElementById('view-schedule').style.display = view === 'schedule' ? '' : 'none';
+  document.getElementById('view-admissions').style.display = view === 'admissions' ? '' : 'none';
+  if(view === 'admissions') renderAdmissions();
+}
+
 let currentTimeEdit = null;
 
 function openTimeSheet(rIdx){
@@ -802,7 +920,8 @@ function insertRowRelative(position){
   const insertIdx = position === 'above' ? currentTimeEdit : currentTimeEdit + 1;
   data.rows.splice(insertIdx, 0, {
     time: "00:00",
-    cells: Array.from({length:DAYS}, () => [])
+    cells: Array.from({length:DAYS}, () => []),
+    statusOverride: new Array(DAYS).fill(null)
   });
   bumpUpdated();
   render();
@@ -826,6 +945,85 @@ document.getElementById('time-sheet-overlay').addEventListener('click', (e) => {
   if(e.target.id === 'time-sheet-overlay') closeTimeSheet();
 });
 
+let currentStatusEdit = null;
+const DAY_LABELS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'];
+
+function openStatusSheet(rIdx, dIdx){
+  currentStatusEdit = {rIdx, dIdx};
+  const row = data.rows[rIdx];
+  document.getElementById('status-sheet-title').textContent = `${row.time} · ${DAY_LABELS[dIdx]}`;
+
+  const box = document.getElementById('status-options');
+  box.innerHTML = '';
+
+  let choices; // {key, text, color}
+  if(currentClassId === 'mua'){
+    choices = data.levels.map(l => ({key: l.id, text: l.name, color: l.color}));
+  } else {
+    const labels = data.admissionLabels || defaultAdmissionLabels();
+    choices = STATUS_KEY_ORDER.map(key => labels.find(l => l.key === key)).filter(Boolean);
+  }
+
+  choices.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'status-option-btn';
+    btn.textContent = opt.text;
+    btn.style.borderColor = opt.color;
+    btn.style.color = opt.color;
+    btn.onclick = () => chooseStatus(opt.key);
+    box.appendChild(btn);
+  });
+
+  const blankBtn = document.createElement('button');
+  blankBtn.className = 'status-option-btn';
+  blankBtn.textContent = '— Để trống —';
+  blankBtn.onclick = () => chooseStatus('BLANK');
+  box.appendChild(blankBtn);
+
+  const autoBtn = document.createElement('button');
+  autoBtn.className = 'status-option-btn auto';
+  autoBtn.textContent = '🔄 Tự động theo quy tắc';
+  autoBtn.onclick = () => chooseStatus(null);
+  box.appendChild(autoBtn);
+
+  document.getElementById('status-sheet-overlay').classList.add('open');
+}
+
+function chooseStatus(key){
+  if(!currentStatusEdit) return;
+  const row = data.rows[currentStatusEdit.rIdx];
+  if(!row.statusOverride || row.statusOverride.length !== DAYS){
+    row.statusOverride = new Array(DAYS).fill(null);
+  }
+  row.statusOverride[currentStatusEdit.dIdx] = key;
+  bumpUpdated();
+  renderAdmissions();
+  saveData();
+  closeStatusSheet();
+  showStatus('Đã lưu trạng thái');
+}
+
+function closeStatusSheet(){
+  document.getElementById('status-sheet-overlay').classList.remove('open');
+  currentStatusEdit = null;
+}
+
+document.getElementById('status-sheet-overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'status-sheet-overlay') closeStatusSheet();
+});
+
+function resetAllStatusOverrides(){
+  if(!confirm('Đặt lại toàn bộ trạng thái tuyển sinh của lớp này theo quy tắc tự động?')) return;
+  data.rows.forEach(row => {
+    if(row.spacer) return;
+    row.statusOverride = new Array(DAYS).fill(null);
+  });
+  bumpUpdated();
+  renderAdmissions();
+  saveData();
+  showStatus('Đã đặt lại trạng thái theo quy tắc');
+}
+
 function levelColor(levelId){
   const lvl = data.levels.find(l => l.id === levelId);
   if(lvl) return lvl.color;
@@ -840,22 +1038,198 @@ function measureTextPx(text){
   return ctx.measureText(text).width;
 }
 
-function applyColumnWidths(){
+function computeColumnWidths(getTextsFn){
   const MIN_COL = 78;
   const EXTRA = 18; // padding ngang của .day-cell + .cell-line + đệm an toàn tối thiểu
   const widths = new Array(DAYS).fill(MIN_COL);
   data.rows.forEach(row => {
     if(row.spacer) return;
     for(let d=0; d<DAYS; d++){
-      const lines = row.cells[d] || [];
-      lines.forEach(l => {
-        const w = measureTextPx(l.text) + EXTRA;
+      const texts = getTextsFn(row, d);
+      texts.forEach(t => {
+        const w = measureTextPx(t) + EXTRA;
         if(w > widths[d]) widths[d] = w;
       });
     }
   });
+  return widths;
+}
+
+function applyColumnWidths(){
+  const widths = computeColumnWidths((row, d) => (row.cells[d] || []).map(l => l.text));
   const grid = document.getElementById('schedule-grid');
   grid.style.gridTemplateColumns = '88px ' + widths.map(w => `minmax(${Math.ceil(w)}px, 1fr)`).join(' ');
+}
+
+function applyAdmissionsColumnWidths(){
+  const widths = computeColumnWidths((row, d) => {
+    const s = getStatusFor(row, d);
+    return s && s.text ? [s.text] : [];
+  });
+  const grid = document.getElementById('admissions-grid');
+  if(grid) grid.style.gridTemplateColumns = '88px ' + widths.map(w => `minmax(${Math.ceil(w)}px, 1fr)`).join(' ');
+}
+
+// ====== TRẠNG THÁI TUYỂN SINH ======
+// Piano/Vẽ: tự tính theo số học sinh trong ca (sắp xếp từ ngưỡng cao xuống thấp), tên & màu lấy từ data.admissionLabels (chỉnh được).
+// Múa: hiển thị theo trình độ của học sinh đầu tiên trong ca (không tính theo số lượng), lấy từ data.levels.
+const STATUS_THRESHOLDS = {
+  piano: [
+    {min:4, key:'full'},
+    {min:3, key:'near'},
+    {min:1, key:'open'}
+  ],
+  ve: [
+    {min:6, key:'full'},
+    {min:4, key:'near'},
+    {min:1, key:'open'}
+  ]
+};
+const STATUS_KEY_ORDER = ['open','near','full']; // thứ tự hiển thị: thấp -> cao
+
+function resolveStatusByKey(key){
+  if(currentClassId === 'mua'){
+    const lvl = data.levels.find(l => l.id === key);
+    return lvl ? {key: lvl.id, text: lvl.name, color: lvl.color} : null;
+  }
+  const labels = data.admissionLabels || defaultAdmissionLabels();
+  const label = labels.find(l => l.key === key);
+  return label ? {key: label.key, text: label.text, color: label.color} : null;
+}
+
+function computeAutoStatus(classId, row, dayIdx){
+  const lines = (row.cells && row.cells[dayIdx]) || [];
+  const count = lines.length;
+  if(classId === 'mua'){
+    if(count === 0) return null;
+    return resolveStatusByKey(lines[0].levelId);
+  }
+  const thresholds = STATUS_THRESHOLDS[classId];
+  if(!thresholds) return null;
+  for(const t of thresholds){
+    if(count >= t.min) return resolveStatusByKey(t.key);
+  }
+  return null;
+}
+
+function getStatusFor(row, dayIdx){
+  const override = row.statusOverride ? row.statusOverride[dayIdx] : undefined;
+  if(override === null || override === undefined){
+    return computeAutoStatus(currentClassId, row, dayIdx);
+  }
+  if(override === 'BLANK') return null;
+  if(typeof override === 'object'){
+    // Định dạng cũ (đã lưu văn bản/màu cố định) — vẫn hỗ trợ để không mất dữ liệu đã có trước đó
+    return override.text ? override : null;
+  }
+  // Định dạng mới: override là "key" tham chiếu tới nhãn trạng thái / trình độ
+  return resolveStatusByKey(override);
+}
+
+function admissionsTitle(){
+  if(data.title.indexOf('Thời khoá biểu') !== -1){
+    return data.title.replace('Thời khoá biểu', 'Lịch tuyển sinh');
+  }
+  return 'Lịch tuyển sinh - ' + data.title;
+}
+
+function renderAdmissions(){
+  if(!document.getElementById('adm-orgName')) return;
+  document.getElementById('adm-orgName').textContent = data.orgName;
+  document.getElementById('adm-title').textContent = admissionsTitle();
+  document.getElementById('adm-monthYear').textContent = data.monthYear;
+  document.getElementById('adm-updated-date').textContent = data.updatedDate;
+
+  const gridBody = document.getElementById('admissions-grid-body');
+  gridBody.innerHTML = '';
+  data.rows.forEach((row, rIdx) => {
+    if(row.spacer){
+      const gap = document.createElement('div');
+      gap.className = 'gap-row';
+      gridBody.appendChild(gap);
+      return;
+    }
+    const timeCell = document.createElement('div');
+    timeCell.className = 'time-cell';
+    timeCell.textContent = row.time;
+    gridBody.appendChild(timeCell);
+    for(let d=0; d<DAYS; d++){
+      const cell = document.createElement('div');
+      cell.className = 'day-cell admissions-cell' + (d === DAYS-1 ? ' last-col' : '');
+      cell.onclick = () => { if(editMode) openStatusSheet(rIdx, d); };
+      const status = getStatusFor(row, d);
+      cell.innerHTML = status
+        ? `<span class="cell-line" data-status-key="${escapeHtml(status.key || '')}" style="color:${status.color}">${escapeHtml(status.text)}</span>`
+        : '';
+      gridBody.appendChild(cell);
+    }
+  });
+  renderAdmissionsLegend();
+  applyAdmissionsColumnWidths();
+}
+
+function renderAdmissionsLegend(){
+  const container = document.getElementById('admissions-legend-row');
+  if(!container) return;
+  container.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'legend-levels';
+
+  if(currentClassId === 'mua'){
+    data.levels.forEach(l => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-swatch" style="background:${l.color}"></span><span class="legend-text">${escapeHtml(l.name)}</span>`;
+      box.appendChild(item);
+    });
+    container.appendChild(box);
+    return;
+  }
+
+  const labels = data.admissionLabels || defaultAdmissionLabels();
+  STATUS_KEY_ORDER.forEach(key => {
+    const label = labels.find(l => l.key === key);
+    if(!label) return;
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <span class="legend-swatch" style="background:${label.color}"></span>
+      <input type="color" class="level-color-input" value="${label.color}">
+      <span class="legend-text" contenteditable="${editMode}">${escapeHtml(label.text)}</span>
+    `;
+    const swatch = item.querySelector('.legend-swatch');
+    const colorInput = item.querySelector('.level-color-input');
+    const nameSpan = item.querySelector('.legend-text');
+    if(editMode){
+      swatch.style.cursor = 'pointer';
+      swatch.onclick = () => colorInput.click();
+      colorInput.addEventListener('input', (e) => {
+        // Cập nhật trực tiếp, KHÔNG render lại toàn bộ (nếu không bảng chọn màu của trình duyệt sẽ tự đóng)
+        label.color = e.target.value;
+        swatch.style.background = e.target.value;
+        document.querySelectorAll(`#admissions-grid-body .cell-line[data-status-key="${label.key}"]`).forEach(el => {
+          el.style.color = e.target.value;
+        });
+      });
+      colorInput.addEventListener('change', () => {
+        bumpUpdated();
+        renderAdmissions();
+        saveData();
+      });
+      nameSpan.addEventListener('blur', (e) => {
+        const newText = e.target.textContent.trim();
+        if(newText) label.text = newText;
+        bumpUpdated();
+        renderAdmissions();
+        saveData();
+      });
+      nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+    } else {
+      swatch.style.cursor = 'default';
+    }
+    box.appendChild(item);
+  });
+  container.appendChild(box);
 }
 
 function render(){
@@ -888,6 +1262,7 @@ function render(){
   });
   renderLegend();
   applyColumnWidths();
+  renderAdmissions();
 }
 
 function renderLegend(){
@@ -1267,7 +1642,8 @@ document.getElementById('monthYear').addEventListener('keydown', preventEnter);
 function exportFilename(){
   const label = (CLASS_LABELS[currentClassId] || currentClassId).toUpperCase();
   const safeDate = data.updatedDate.replace(/\//g, '');
-  return `Thoikhoabieu_${label}_${safeDate}.png`;
+  const prefix = currentView === 'admissions' ? 'LichTuyenSinh' : 'Thoikhoabieu';
+  return `${prefix}_${label}_${safeDate}.png`;
 }
 
 function isIOSDevice(){
@@ -1280,7 +1656,7 @@ function isIOSDevice(){
 
 async function exportImage(){
   showStatus('Đang tạo ảnh...');
-  const el = document.getElementById('capture-area');
+  const el = document.getElementById(currentView === 'admissions' ? 'admissions-capture-area' : 'capture-area');
   el.classList.add('exporting');
   try{
     if(document.fonts && document.fonts.ready){
