@@ -1,0 +1,17 @@
+{
+  "name": "Thời khoá biểu - L'espace Art",
+  "short_name": "Thời khoá biểu",
+  "description": "Quản lý thời khoá biểu và lịch tuyển sinh các lớp Piano, Múa, Vẽ - Trung tâm nghệ thuật L'espace Art",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FAF5EC",
+  "theme_color": "#5D1F1F",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
