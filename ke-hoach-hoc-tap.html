@@ -863,7 +863,8 @@ function applyPlanColumnWidths(){
   let lockedWidth = measureTextPx(headerLabel) + 28;
   rows.forEach(r => { const w = measureTextPx(r.label) + 28; if(w > lockedWidth) lockedWidth = w; });
   if(lockedWidth < 100) lockedWidth = 100;
-  grid.style.gridTemplateColumns = `${Math.ceil(lockedWidth)}px 1fr 1fr 1fr`;
+  const MIN_CONTENT_COL = 170;
+  grid.style.gridTemplateColumns = `${Math.ceil(lockedWidth)}px minmax(${MIN_CONTENT_COL}px, 1fr) minmax(${MIN_CONTENT_COL}px, 1fr) minmax(${MIN_CONTENT_COL}px, 1fr)`;
 }
 
 function isDateRangeColumn(colKey){
