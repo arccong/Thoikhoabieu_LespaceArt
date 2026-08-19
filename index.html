@@ -364,7 +364,7 @@
   body.view-mode #btn-sync-plan{display:none;}
 
   .app-header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-  #user-avatar-wrap{position:relative;flex-shrink:0;display:none;}
+  #user-avatar-wrap{position:relative;flex-shrink:0;display:none;align-items:center;}
   #user-avatar-btn{
     width:36px;height:36px;border-radius:50%;background:var(--maroon);color:#fff;border:none;
     font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;cursor:pointer;
@@ -1150,7 +1150,7 @@ function updateUserAvatar(user){
     closeUserMenu();
     return;
   }
-  wrap.style.display = '';
+  wrap.style.display = 'inline-flex';
   const email = user.email || '';
   document.getElementById('user-avatar-btn').textContent = email.charAt(0).toUpperCase() || '?';
   document.getElementById('user-menu-email').textContent = email;
