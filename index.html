@@ -1037,6 +1037,11 @@ function setEditMode(on){
 }
 
 function requestEditMode(){
+  if(isAuthenticated){
+    // Đã đăng nhập nhưng tài khoản không có quyền với lớp đang xem
+    showStatus('Tài khoản của bạn không có quyền chỉnh sửa lớp này');
+    return;
+  }
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').style.display = 'none';
@@ -1065,8 +1070,7 @@ function submitLogin(){
   auth.signInWithEmailAndPassword(email, password)
     .then(() => {
       closePinSheet();
-      showStatus('Đã mở chế độ chỉnh sửa');
-      // setEditMode(true) sẽ được gọi tự động qua onAuthStateChanged
+      // Trạng thái chỉnh sửa (và thông báo quyền) sẽ được cập nhật tự động qua onAuthStateChanged
     })
     .catch((err) => {
       let msg = 'Đăng nhập thất bại';
@@ -1095,9 +1099,48 @@ function exitEditMode(){
   showStatus('Đã thoát chế độ chỉnh sửa');
 }
 
+// ====== PHÂN QUYỀN: QUẢN LÝ (mọi lớp) / GIÁO VIÊN (chỉ lớp phụ trách) ======
+let isAuthenticated = false;
+let userRole = null;      // 'manager' | 'teacher' | null
+let userClassId = null;   // chỉ có ý nghĩa khi userRole === 'teacher'
+
+function canEditClass(classId){
+  if(!isAuthenticated) return false;
+  if(userRole === 'manager') return true;
+  if(userRole === 'teacher') return classId === userClassId;
+  return false;
+}
+
+function refreshEditMode(){
+  setEditMode(canEditClass(currentClassId));
+}
+
 if(FIREBASE_ENABLED && auth){
-  auth.onAuthStateChanged((user) => {
-    setEditMode(!!user);
+  auth.onAuthStateChanged(async (user) => {
+    if(user){
+      isAuthenticated = true;
+      try{
+        const roleDoc = await db.collection('users').doc(user.uid).get();
+        if(roleDoc.exists){
+          const d = roleDoc.data();
+          userRole = d.role || null;
+          userClassId = d.classId || null;
+        } else {
+          userRole = null;
+          userClassId = null;
+          showStatus('Tài khoản chưa được cấp quyền, vui lòng liên hệ quản lý');
+        }
+      }catch(e){
+        console.error('Lỗi tải quyền tài khoản', e);
+        userRole = null;
+        userClassId = null;
+      }
+    } else {
+      isAuthenticated = false;
+      userRole = null;
+      userClassId = null;
+    }
+    refreshEditMode();
   });
 }
 
@@ -1113,6 +1156,7 @@ function switchClass(classId){
   } else {
     showStatus('Đang tải dữ liệu lớp ' + (CLASS_LABELS[classId] || classId) + '...');
   }
+  refreshEditMode();
 }
 
 document.getElementById('class-select').addEventListener('change', (e) => {
