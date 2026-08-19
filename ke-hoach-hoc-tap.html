@@ -50,6 +50,7 @@
     flex-wrap:wrap;row-gap:10px;
   }
   .app-header-left{display:flex;align-items:center;gap:12px;min-width:0;}
+  .app-header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;}
   .app-header img{height:34px;width:auto;flex-shrink:0;}
   .app-header-text{min-width:0;overflow:hidden;}
   .app-header-text .tagline{
@@ -172,20 +173,58 @@
   }
   #status.show{opacity:1;}
 
-  #pin-overlay, #plan-sheet-overlay{
+  #plan-sheet-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
   }
-  #pin-overlay.open, #plan-sheet-overlay.open{display:flex;}
-  #pin-sheet, #plan-sheet{
+  #plan-sheet-overlay.open{display:flex;}
+  #plan-sheet{
     background:var(--card);width:100%;max-width:420px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 20px 24px;
     box-shadow:0 16px 40px rgba(42,26,18,0.14);border-top:1px solid var(--border);max-height:80vh;overflow-y:auto;
   }
-  #pin-sheet h3, #plan-sheet h3{margin:0 0 4px;font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--maroon);}
+  #plan-sheet h3{margin:0 0 4px;font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--maroon);}
   .hint{font-size:12px;color:var(--muted);margin:0 0 12px;}
-  #login-email, #login-password{
-    width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);font-size:15px;
-    font-family:'Montserrat',sans-serif;
+
+  #pin-overlay{
+    position:fixed;inset:0;background:var(--cream);display:none;align-items:center;justify-content:center;z-index:100;
+    padding:24px;
   }
+  #pin-overlay.open{display:flex;}
+  #login-close{
+    position:absolute;top:20px;right:20px;background:none;border:none;color:var(--muted);
+    font-size:22px;line-height:1;cursor:pointer;padding:6px;
+  }
+  #pin-sheet{
+    width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;text-align:center;
+    background:none;box-shadow:none;border:none;border-radius:0;padding:0;max-height:none;overflow:visible;
+  }
+  .login-logo{width:120px;height:auto;margin-bottom:18px;}
+  .login-title{
+    font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--clay);margin:0 0 40px;
+  }
+  .login-form{width:100%;text-align:left;}
+  .login-form label{
+    display:block;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:600;color:var(--ink);
+    margin:0 0 6px;
+  }
+  #login-email, #login-password{
+    width:100%;padding:13px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;
+    font-size:15px;font-family:'Montserrat',sans-serif;margin-bottom:16px;color:var(--ink);
+  }
+  #login-email::placeholder, #login-password::placeholder{color:#b9ab9c;}
+  #login-error{color:var(--red);font-size:12.5px;margin:-6px 0 12px;text-align:center;}
+  .remember-row{
+    display:flex;align-items:center;gap:8px;margin:0 0 20px;cursor:pointer;
+    font-family:'Montserrat',sans-serif;font-size:13px;color:var(--ink);
+  }
+  .remember-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--clay);cursor:pointer;flex-shrink:0;}
+  #login-submit-btn{
+    width:100%;padding:14px;border-radius:999px;border:none;background:var(--clay);color:#fff;
+    font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;
+  }
+  #login-submit-btn:hover{background:var(--maroon);}
+  #login-submit-btn .icon{width:17px;height:17px;}
+
   .sheet-actions{display:flex;gap:8px;}
   .sheet-actions button{flex:1;padding:12px;border-radius:12px;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid var(--maroon);transition:.15s;}
   .sheet-actions .save{background:var(--maroon);color:#fff;}
@@ -240,22 +279,25 @@
 </style>
 </head>
 <body class="view-mode">
-<header class="app-header">
+<header class="app-header" id="app-header" style="display:none;">
   <div class="app-header-left">
     <img src="logo.png" alt="L'espace Art" onerror="this.style.display='none'">
     <div class="app-header-text"><div class="tagline">Kế hoạch học tập</div></div>
   </div>
-  <div id="user-avatar-wrap">
-    <button id="user-avatar-btn" onclick="toggleUserMenu()"></button>
-    <div id="user-menu">
-      <div id="user-menu-email"></div>
-      <div id="user-menu-role"></div>
-      <button id="user-menu-signout" onclick="exitEditMode(); closeUserMenu();">Đăng xuất</button>
+  <div class="app-header-right">
+    <a class="back-link" id="back-link" href="index.html" style="display:none;">← Thời khoá biểu</a>
+    <div id="user-avatar-wrap">
+      <button id="user-avatar-btn" onclick="toggleUserMenu()"></button>
+      <div id="user-menu">
+        <div id="user-menu-email"></div>
+        <div id="user-menu-role"></div>
+        <button id="user-menu-signout" onclick="signOutUser()">Đăng xuất</button>
+      </div>
     </div>
   </div>
 </header>
 
-<div id="app">
+<div id="app" style="display:none;">
   <div class="toolbar">
     <select id="class-select" class="class-select">
       <option value="piano">Lớp Piano</option>
@@ -293,7 +335,7 @@
   <button id="btn-sync-plan" style="display:none;" onclick="syncPlanRows()">🔄 Đồng bộ dữ liệu</button>
 </div>
 
-<div class="bottom-action-bar">
+<div class="bottom-action-bar" id="bottom-action-bar" style="display:none;">
   <button id="btn-request-edit" class="btn btn-secondary" onclick="requestEditMode()">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     Chỉnh sửa
@@ -310,14 +352,22 @@
 
 <div id="pin-overlay">
   <div id="pin-sheet">
-    <h3>Đăng nhập để chỉnh sửa</h3>
-    <p class="hint">Đăng nhập bằng tài khoản được cấp để mở chế độ chỉnh sửa.</p>
-    <input type="email" id="login-email" autocomplete="username" placeholder="Email" style="margin-bottom:8px;">
-    <input type="password" id="login-password" autocomplete="current-password" placeholder="Mật khẩu">
-    <p id="login-error" style="color:var(--red);font-size:12.5px;margin:8px 0 0;display:none;"></p>
-    <div class="sheet-actions" style="margin-top:14px;">
-      <button class="cancel" onclick="closePinSheet()">Huỷ</button>
-      <button class="save" onclick="submitLogin()">Đăng nhập</button>
+    <img class="login-logo" src="logo.png" alt="L'espace Art" onerror="this.style.display='none'">
+    <h1 class="login-title">Kế hoạch học tập</h1>
+    <div class="login-form">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" autocomplete="username" placeholder="email@vidu.com">
+      <label for="login-password">Mật khẩu</label>
+      <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••">
+      <label class="remember-row">
+        <input type="checkbox" id="login-remember" checked>
+        <span>Ghi nhớ đăng nhập trên thiết bị này</span>
+      </label>
+      <p id="login-error" style="display:none;"></p>
+      <button id="login-submit-btn" onclick="submitLogin()">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+        Đăng nhập
+      </button>
     </div>
   </div>
 </div>
@@ -533,15 +583,12 @@ function setEditMode(on){
   if(data) render();
 }
 function requestEditMode(){
-  if(isAuthenticated){
+  // Đã đăng nhập bắt buộc từ đầu để xem trang, nên nút này chỉ cần bật/tắt chế độ chỉnh sửa
+  if(canEditClass(currentClassId)){
+    setEditMode(true);
+  } else {
     showStatus('Tài khoản của bạn không có quyền chỉnh sửa lớp này');
-    return;
   }
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-password').value = '';
-  document.getElementById('login-error').style.display = 'none';
-  document.getElementById('pin-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('login-email').focus(), 50);
 }
 function closePinSheet(){ document.getElementById('pin-overlay').classList.remove('open'); }
 function submitLogin(){
@@ -551,6 +598,7 @@ function submitLogin(){
   }
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
+  const remember = document.getElementById('login-remember').checked;
   const errorEl = document.getElementById('login-error');
   errorEl.style.display = 'none';
   if(!email || !password){
@@ -558,7 +606,9 @@ function submitLogin(){
     errorEl.style.display = 'block';
     return;
   }
-  auth.signInWithEmailAndPassword(email, password)
+  const persistence = remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+  auth.setPersistence(persistence)
+    .then(() => auth.signInWithEmailAndPassword(email, password))
     .then(() => {
       closePinSheet();
     })
@@ -574,16 +624,25 @@ function submitLogin(){
 document.getElementById('login-password').addEventListener('keydown', (e) => {
   if(e.key === 'Enter'){ e.preventDefault(); submitLogin(); }
 });
-document.getElementById('pin-overlay').addEventListener('click', (e) => {
-  if(e.target.id === 'pin-overlay') closePinSheet();
-});
+
+// "Thoát" ở thanh dưới cùng: chỉ quay về chế độ xem, KHÔNG đăng xuất
 function exitEditMode(){
+  setEditMode(false);
+  showStatus('Đã quay về chế độ xem');
+}
+
+// Đăng xuất thật sự: chỉ gọi từ menu avatar
+function signOutUser(){
   if(FIREBASE_ENABLED && auth){
     auth.signOut();
-  } else {
-    setEditMode(false);
   }
-  showStatus('Đã thoát chế độ chỉnh sửa');
+  closeUserMenu();
+}
+
+function setAppVisible(visible){
+  document.getElementById('app-header').style.display = visible ? '' : 'none';
+  document.getElementById('app').style.display = visible ? '' : 'none';
+  document.getElementById('bottom-action-bar').style.display = visible ? '' : 'none';
 }
 
 function toggleUserMenu(){
@@ -634,12 +693,28 @@ function refreshEditMode(){
   setEditMode(canEditClass(currentClassId));
 }
 
+function applyRoleUI(){
+  const sel = document.getElementById('class-select');
+  const backLink = document.getElementById('back-link');
+  if(isAuthenticated && userRole === 'teacher' && userClassId){
+    sel.style.display = 'none';
+    if(currentClassId !== userClassId){
+      switchClass(userClassId);
+    }
+  } else {
+    sel.style.display = '';
+  }
+  backLink.style.display = (isAuthenticated && userRole === 'manager') ? '' : 'none';
+}
+
 if(FIREBASE_ENABLED && auth){
   auth.onAuthStateChanged(async (user) => {
     if(user){
       isAuthenticated = true;
       isCheckingRole = true;
       updateUserAvatar(user);
+      setAppVisible(true);
+      closePinSheet();
       try{
         const roleDoc = await db.collection('users').doc(user.uid).get();
         if(roleDoc.exists){
@@ -661,10 +736,19 @@ if(FIREBASE_ENABLED && auth){
       isAuthenticated = false;
       userRole = null;
       userClassId = null;
+      setAppVisible(false);
+      document.getElementById('login-email').value = '';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-error').style.display = 'none';
+      document.getElementById('pin-overlay').classList.add('open');
     }
     updateUserAvatar(user);
-    refreshEditMode();
+    applyRoleUI();
+    setEditMode(false); // luôn mặc định về chế độ xem sau khi vào/ra
   });
+} else {
+  // Không có Firebase: vẫn hiện app ở chế độ xem, không có chỉnh sửa
+  setAppVisible(true);
 }
 
 // ====== KẾ HOẠCH HỌC TẬP ======
