@@ -31,12 +31,12 @@
     --shadow-sm:0 1px 3px rgba(42,26,18,0.07);
     --shadow-md:0 6px 20px rgba(42,26,18,0.09);
     --shadow-card:0 8px 22px rgba(42,26,18,0.16);
-    --header-bg:#ece1cf;
-    --day-header-bg:#743b1f;
-    --day-header-line:#8d5136;
-    --header-text-color:#6e2c31;
-    --day-header-text-color:#fbf8f4;
-    --time-cell-bg:#f0eae0;
+    --header-bg:#EDE1D3;
+    --day-header-bg:#F6F0E8;
+    --day-header-line:#e6d8c4;
+    --header-text-color:#743B1F;
+    --day-header-text-color:#743B1F;
+    --time-cell-bg:#f6f0e8;
     --cell-bg:#fefbf7;
     --row-border:#e6dcd4;
     --legend-text:#50453d;
@@ -207,6 +207,14 @@
     -webkit-appearance:none;appearance:none;
   }
   .plan-line-row textarea:focus{background:#efe6d3;}
+  .plan-date-inputs{display:flex;align-items:center;gap:8px;}
+  .plan-date-inputs input[type=date]{
+    flex:1;min-width:0;padding:9px 8px;border-radius:8px;border:none;background:#f4eee1;font-size:13.5px;
+    font-family:'Montserrat',sans-serif;outline:none;color:var(--ink);
+    -webkit-appearance:none;appearance:none;
+  }
+  .plan-date-inputs input[type=date]:focus{background:#efe6d3;}
+  .plan-date-sep{color:var(--muted);font-size:13px;flex-shrink:0;}
   .del-line{border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;}
   #plan-add-line{padding:8px 12px;border-radius:8px;border:1px dashed var(--maroon);background:transparent;color:var(--maroon-dark);font-size:13px;margin-bottom:14px;width:100%;cursor:pointer;font-family:'Montserrat',sans-serif;}
 
@@ -858,6 +866,18 @@ function applyPlanColumnWidths(){
   grid.style.gridTemplateColumns = `${Math.ceil(lockedWidth)}px 1fr 1fr 1fr`;
 }
 
+function isDateRangeColumn(colKey){
+  return (currentClassId === 'piano' || currentClassId === 've') && colKey === 'col1';
+}
+
+function formatDateVN(isoStr){
+  if(!isoStr) return '';
+  const parts = isoStr.split('-');
+  if(parts.length !== 3) return isoStr;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+
 function openPlanSheet(key, label, colKey, colLabel){
   currentPlanEdit = { key, colKey };
   document.getElementById('plan-sheet-title').textContent = `${label} · ${colLabel}`;
@@ -865,12 +885,41 @@ function openPlanSheet(key, label, colKey, colLabel){
   editor.innerHTML = '';
   const entry = (data.plan.entries && data.plan.entries[key]) || {};
   const lines = entry[colKey] || [];
+  const dateMode = isDateRangeColumn(colKey);
+  document.getElementById('plan-add-line').textContent = dateMode ? '+ Thêm kỳ học' : '+ Thêm dòng';
+  document.querySelector('#plan-sheet .hint').textContent = dateMode
+    ? 'Chọn ngày bắt đầu và ngày kết thúc của từng kỳ học.'
+    : 'Mỗi dòng là một mục. Có thể thêm nhiều dòng và kéo để sắp xếp.';
   if(lines.length === 0){
-    addPlanLineRow('', data.planLevels[0] ? data.planLevels[0].id : '');
+    if(dateMode) addPlanDateRangeRow('', '', data.planLevels[0] ? data.planLevels[0].id : '');
+    else addPlanLineRow('', data.planLevels[0] ? data.planLevels[0].id : '');
   } else {
-    lines.forEach(l => addPlanLineRow(l.text, l.levelId));
+    lines.forEach(l => {
+      if(dateMode) addPlanDateRangeRow(l.startDate || '', l.endDate || '', l.levelId);
+      else addPlanLineRow(l.text, l.levelId);
+    });
   }
   document.getElementById('plan-sheet-overlay').classList.add('open');
+}
+
+function addPlanDateRangeRow(startDate, endDate, levelId){
+  const editor = document.getElementById('plan-line-editor');
+  const row = document.createElement('div');
+  row.className = 'plan-line-row plan-date-row';
+  const initialId = levelId || (data.planLevels[0] ? data.planLevels[0].id : '');
+  const initialColor = planLevelColor(initialId);
+  row.innerHTML = `
+    <span class="drag-handle">⠿</span>
+    <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cyclePlanLevel(this)"></div>
+    <div class="input-wrap plan-date-inputs">
+      <input type="date" class="plan-date-start" value="${startDate || ''}">
+      <span class="plan-date-sep">–</span>
+      <input type="date" class="plan-date-end" value="${endDate || ''}">
+    </div>
+    <button class="del-line" onclick="this.parentElement.remove()">✕</button>
+  `;
+  editor.appendChild(row);
+  makeRowDraggable(row);
 }
 
 function addPlanLineRow(text, levelId){
@@ -946,7 +995,13 @@ function cyclePlanLevel(el){
   el.style.background = planLevelColor(ids[idx]);
 }
 
-function addPlanLine(){ addPlanLineRow('', data.planLevels[0] ? data.planLevels[0].id : ''); }
+function addPlanLine(){
+  if(currentPlanEdit && isDateRangeColumn(currentPlanEdit.colKey)){
+    addPlanDateRangeRow('', '', data.planLevels[0] ? data.planLevels[0].id : '');
+  } else {
+    addPlanLineRow('', data.planLevels[0] ? data.planLevels[0].id : '');
+  }
+}
 
 function closePlanSheet(){
   document.getElementById('plan-sheet-overlay').classList.remove('open');
@@ -955,13 +1010,24 @@ function closePlanSheet(){
 
 function savePlanSheet(){
   if(!currentPlanEdit) return;
+  const dateMode = isDateRangeColumn(currentPlanEdit.colKey);
   const rows = document.querySelectorAll('#plan-line-editor .plan-line-row');
   const newLines = [];
   rows.forEach(r => {
-    const text = r.querySelector('textarea').value.trim();
-    if(text){
-      const levelId = r.querySelector('.color-toggle').dataset.levelId;
-      newLines.push({text, levelId});
+    const levelId = r.querySelector('.color-toggle').dataset.levelId;
+    if(dateMode){
+      const startDate = r.querySelector('.plan-date-start').value;
+      const endDate = r.querySelector('.plan-date-end').value;
+      if(startDate || endDate){
+        let text;
+        if(startDate && endDate) text = `${formatDateVN(startDate)} - ${formatDateVN(endDate)}`;
+        else if(startDate) text = `Từ ${formatDateVN(startDate)}`;
+        else text = `Đến ${formatDateVN(endDate)}`;
+        newLines.push({text, levelId, startDate, endDate});
+      }
+    } else {
+      const text = r.querySelector('textarea').value.trim();
+      if(text) newLines.push({text, levelId});
     }
   });
   if(!data.plan.entries[currentPlanEdit.key]) data.plan.entries[currentPlanEdit.key] = {};
