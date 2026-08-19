@@ -886,9 +886,9 @@ function openPlanSheet(key, label, colKey, colLabel){
   const entry = (data.plan.entries && data.plan.entries[key]) || {};
   const lines = entry[colKey] || [];
   const dateMode = isDateRangeColumn(colKey);
-  document.getElementById('plan-add-line').textContent = dateMode ? '+ Thêm kỳ học' : '+ Thêm dòng';
+  document.getElementById('plan-add-line').style.display = dateMode ? 'none' : '';
   document.querySelector('#plan-sheet .hint').textContent = dateMode
-    ? 'Chọn ngày bắt đầu và ngày kết thúc của từng kỳ học.'
+    ? 'Chọn ngày bắt đầu và ngày kết thúc của kỳ học.'
     : 'Mỗi dòng là một mục. Có thể thêm nhiều dòng và kéo để sắp xếp.';
   if(lines.length === 0){
     if(dateMode) addPlanDateRangeRow('', '', data.planLevels[0] ? data.planLevels[0].id : '');
@@ -906,20 +906,14 @@ function addPlanDateRangeRow(startDate, endDate, levelId){
   const editor = document.getElementById('plan-line-editor');
   const row = document.createElement('div');
   row.className = 'plan-line-row plan-date-row';
-  const initialId = levelId || (data.planLevels[0] ? data.planLevels[0].id : '');
-  const initialColor = planLevelColor(initialId);
   row.innerHTML = `
-    <span class="drag-handle">⠿</span>
-    <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cyclePlanLevel(this)"></div>
     <div class="input-wrap plan-date-inputs">
       <input type="date" class="plan-date-start" value="${startDate || ''}">
       <span class="plan-date-sep">–</span>
       <input type="date" class="plan-date-end" value="${endDate || ''}">
     </div>
-    <button class="del-line" onclick="this.parentElement.remove()">✕</button>
   `;
   editor.appendChild(row);
-  makeRowDraggable(row);
 }
 
 function addPlanLineRow(text, levelId){
@@ -1013,8 +1007,8 @@ function savePlanSheet(){
   const dateMode = isDateRangeColumn(currentPlanEdit.colKey);
   const rows = document.querySelectorAll('#plan-line-editor .plan-line-row');
   const newLines = [];
+  const defaultLevelId = data.planLevels[0] ? data.planLevels[0].id : '';
   rows.forEach(r => {
-    const levelId = r.querySelector('.color-toggle').dataset.levelId;
     if(dateMode){
       const startDate = r.querySelector('.plan-date-start').value;
       const endDate = r.querySelector('.plan-date-end').value;
@@ -1023,9 +1017,10 @@ function savePlanSheet(){
         if(startDate && endDate) text = `${formatDateVN(startDate)} - ${formatDateVN(endDate)}`;
         else if(startDate) text = `Từ ${formatDateVN(startDate)}`;
         else text = `Đến ${formatDateVN(endDate)}`;
-        newLines.push({text, levelId, startDate, endDate});
+        newLines.push({text, levelId: defaultLevelId, startDate, endDate});
       }
     } else {
+      const levelId = r.querySelector('.color-toggle').dataset.levelId;
       const text = r.querySelector('textarea').value.trim();
       if(text) newLines.push({text, levelId});
     }
