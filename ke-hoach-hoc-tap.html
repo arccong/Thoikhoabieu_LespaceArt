@@ -47,6 +47,7 @@
   .app-header{
     position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:12px 24px;background:rgba(250,245,236,0.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);
+    flex-wrap:wrap;row-gap:10px;
   }
   .app-header-left{display:flex;align-items:center;gap:12px;min-width:0;}
   .app-header img{height:34px;width:auto;flex-shrink:0;}
@@ -55,7 +56,6 @@
     font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--maroon);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  @media (max-width:680px){.app-header-text{display:none;}}
   .back-link{
     font-family:'Montserrat',sans-serif;font-size:13px;font-weight:600;color:var(--maroon);
     text-decoration:none;border:1.5px solid var(--maroon);border-radius:100px;padding:7px 14px;white-space:nowrap;flex-shrink:0;
@@ -162,8 +162,9 @@
   .bottom-action-bar{
     position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:40;
     display:flex;gap:10px;width:100%;max-width:420px;padding:0 16px;box-sizing:border-box;
+    pointer-events:none;
   }
-  .bottom-action-bar .btn{flex:1;}
+  .bottom-action-bar .btn{flex:1;pointer-events:auto;}
 
   #status{
     position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:var(--maroon-dark);color:#fff;
