@@ -16,6 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Fraunces:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
@@ -77,6 +78,7 @@
   .view-tab-btn{
     border:none;background:transparent;padding:7px 16px;border-radius:100px;
     font-family:'Montserrat',sans-serif;font-weight:500;font-size:13px;color:#686868;cursor:pointer;transition:.15s;white-space:nowrap;
+    text-decoration:none;display:inline-flex;align-items:center;
   }
   .view-tab-btn.active{background:var(--clay);color:#fff;}
   @media (max-width:640px){.view-tab-btn{padding:7px 11px;font-size:12px;}}
@@ -103,11 +105,21 @@
   #admissions-capture-area.exporting .level-del,
   #admissions-capture-area.exporting .level-add{display:none !important;}
   #admissions-capture-area.exporting{box-shadow:none;}
+  #plan-capture-area{background:var(--cell-bg);padding:0;display:inline-block;vertical-align:top;border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden;}
+  #plan-capture-area.exporting .cap-footer,
+  #plan-capture-area.exporting .level-del,
+  #plan-capture-area.exporting .level-add{display:none !important;}
+  #plan-capture-area.exporting{box-shadow:none;}
   #btn-reset-status{
     width:100%;margin-top:14px;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--forest);background:#fff;
     color:var(--forest);font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;
   }
   #btn-reset-status:hover{background:var(--forest);color:#fff;}
+  #btn-sync-plan{
+    width:100%;margin-top:14px;padding:12px;border-radius:var(--radius-sm);border:1.5px solid var(--clay);background:#fff;
+    color:var(--clay);font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;
+  }
+  #btn-sync-plan:hover{background:var(--clay);color:#fff;}
   .class-select{
     flex:1;min-width:140px;padding:11px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);
     background:#fff;color:var(--ink);font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;cursor:pointer;
@@ -137,15 +149,15 @@
   .cap-header{background:var(--header-bg);padding:20px 48px 18px;}
   .header-flex{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;}
   .header-left{display:flex;flex-direction:column;gap:3px;flex:1;min-width:200px;}
-  #orgName, #adm-orgName{
+  #orgName, #adm-orgName, #plan-orgName{
     font-family:'Work Sans',sans-serif;font-weight:700;font-size:14px;line-height:1.6;
     letter-spacing:1.5px;color:var(--header-text-color);text-transform:uppercase;outline:none;
   }
-  #title, #adm-title{
+  #title, #adm-title, #plan-title{
     font-family:'Libre Baskerville',Georgia,serif;font-weight:700;color:var(--header-text-color);
     font-size:34px;outline:none;line-height:1.35;padding-top:4px;
   }
-  #monthYear, #adm-monthYear{
+  #monthYear, #adm-monthYear, #plan-monthYear{
     font-family:'Libre Baskerville',Georgia,serif;font-style:italic;font-weight:700;font-size:19.5px;color:var(--header-text-color);
     outline:none;line-height:1.6;
   }
@@ -153,7 +165,7 @@
   .updated-label{
     font-size:13.5px;font-weight:700;letter-spacing:1.5px;color:var(--header-text-color);text-transform:uppercase;
   }
-  #updated-date, #adm-updated-date{
+  #updated-date, #adm-updated-date, #plan-updated-date{
     font-family:'Libre Baskerville',Georgia,serif;font-weight:700;font-size:21px;color:var(--header-text-color);
     margin-top:3px;white-space:nowrap;
   }
@@ -240,6 +252,31 @@
     background:transparent;font-size:14px;font-weight:700;cursor:pointer;text-align:center;
   }
   .status-option-btn.auto{border-style:dashed;color:var(--maroon-dark);border-color:var(--maroon);font-weight:600;}
+  #plan-sheet-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
+  }
+  #plan-sheet-overlay.open{display:flex;}
+  #plan-sheet{
+    background:var(--card);width:100%;max-width:420px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 20px 24px;box-shadow:var(--shadow-lg);border-top:1px solid var(--border);
+    max-height:80vh;overflow-y:auto;
+  }
+  #plan-sheet h3{margin:0 0 4px;font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--maroon);}
+  .plan-line-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+  .plan-line-row .drag-handle{
+    cursor:grab;color:var(--muted);font-size:20px;padding:6px 8px;flex-shrink:0;
+    touch-action:none;user-select:none;-webkit-user-select:none;line-height:1;
+  }
+  .plan-line-row .input-wrap{flex:1;}
+  .plan-line-row textarea{
+    width:100%;padding:9px 10px;border-radius:8px;border:none;background:#f4eee1;font-size:14px;
+    font-family:'Montserrat',sans-serif;resize:vertical;min-height:38px;outline:none;
+    -webkit-appearance:none;appearance:none;
+  }
+  .plan-line-row textarea:focus{background:#efe6d3;}
+  .plan-line-row .del-line{border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;}
+  #plan-add-line{padding:8px 12px;border-radius:8px;border:1px dashed var(--maroon);background:transparent;color:var(--maroon-dark);font-size:13px;margin-bottom:14px;width:100%;cursor:pointer;font-family:'Montserrat',sans-serif;}
+  .plan-locked-cell{cursor:default !important;font-weight:700;}
+  .plan-cell-line{white-space:normal !important;word-break:break-word;text-align:left;}
   #pin-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
   }
@@ -248,9 +285,9 @@
     background:var(--card);width:100%;max-width:380px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 20px 24px;box-shadow:var(--shadow-lg);border-top:1px solid var(--border);
   }
   #pin-sheet h3{margin:0 0 4px;font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--maroon);}
-  #pin-input{
-    width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);font-size:20px;letter-spacing:4px;
-    text-align:center;margin:10px 0 14px;
+  #login-email, #login-password{
+    width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);font-size:15px;
+    font-family:'Montserrat',sans-serif;
   }
   #time-input{
     width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);font-size:16px;margin:6px 0 14px;
@@ -320,6 +357,7 @@
   body.view-mode .day-cell{cursor:default;}
   body.view-mode .cap-footer{display:none;}
   body.view-mode #btn-reset-status{display:none;}
+  body.view-mode #btn-sync-plan{display:none;}
 </style>
 </head>
 <body class="view-mode">
@@ -333,6 +371,7 @@
   <div class="view-tabs" id="view-tabs">
     <button class="view-tab-btn active" data-view="schedule" onclick="switchView('schedule')">Thời khoá biểu</button>
     <button class="view-tab-btn" data-view="admissions" onclick="switchView('admissions')">Lịch tuyển sinh</button>
+    <a class="view-tab-btn" href="ke-hoach-hoc-tap.html">Kế hoạch học tập ↗</a>
   </div>
 </header>
 <div id="app">
@@ -411,6 +450,36 @@
   <button id="btn-reset-status" style="display:none;" onclick="resetAllStatusOverrides()">🔄 Reset trạng thái theo quy tắc</button>
   </div>
 
+  <div id="view-plan" style="display:none;">
+  <div class="capture-scroll">
+  <div id="plan-capture-area">
+    <div class="cap-header">
+      <div class="header-flex">
+        <div class="header-left">
+          <div id="plan-orgName"></div>
+          <div id="plan-title"></div>
+          <div id="plan-monthYear"></div>
+        </div>
+        <div class="header-right">
+          <div class="updated-label">Cập nhật</div>
+          <div id="plan-updated-date"></div>
+        </div>
+      </div>
+    </div>
+    <div class="schedule-grid" id="plan-grid">
+      <div class="day-header" id="plan-col0-header"></div>
+      <div class="day-header" id="plan-col1-header"></div>
+      <div class="day-header" id="plan-col2-header"></div>
+      <div class="day-header" id="plan-col3-header"></div>
+      <div id="plan-grid-body" style="display:contents;"></div>
+    </div>
+    <div class="legend-row" id="plan-legend-row"></div>
+    <div class="cap-footer">Chạm vào ô để chỉnh sửa</div>
+  </div>
+  <button id="btn-sync-plan" style="display:none;" onclick="syncPlanRows()">🔄 Đồng bộ dữ liệu</button>
+  </div>
+  </div>
+
 </div>
 
 <div class="bottom-action-bar">
@@ -451,12 +520,14 @@
 
 <div id="pin-overlay">
   <div id="pin-sheet">
-    <h3>Nhập mã để chỉnh sửa</h3>
-    <p class="hint">Nhập mã PIN để mở chế độ chỉnh sửa.</p>
-    <input type="password" id="pin-input" inputmode="numeric" autocomplete="off" placeholder="Mã PIN">
-    <div class="sheet-actions">
+    <h3>Đăng nhập để chỉnh sửa</h3>
+    <p class="hint">Đăng nhập bằng tài khoản được cấp để mở chế độ chỉnh sửa.</p>
+    <input type="email" id="login-email" autocomplete="username" placeholder="Email" style="margin-bottom:8px;">
+    <input type="password" id="login-password" autocomplete="current-password" placeholder="Mật khẩu">
+    <p id="login-error" style="color:var(--red);font-size:12.5px;margin:8px 0 0;display:none;"></p>
+    <div class="sheet-actions" style="margin-top:14px;">
       <button class="cancel" onclick="closePinSheet()">Huỷ</button>
-      <button class="save" onclick="submitPin()">Xác nhận</button>
+      <button class="save" onclick="submitLogin()">Đăng nhập</button>
     </div>
   </div>
 </div>
@@ -500,6 +571,19 @@
   </div>
 </div>
 
+<div id="plan-sheet-overlay">
+  <div id="plan-sheet">
+    <h3 id="plan-sheet-title">Chỉnh nội dung</h3>
+    <p class="hint">Mỗi dòng là một mục. Có thể thêm nhiều dòng và kéo để sắp xếp.</p>
+    <div id="plan-line-editor"></div>
+    <button id="plan-add-line" onclick="addPlanLine()">+ Thêm dòng</button>
+    <div class="sheet-actions">
+      <button class="cancel" onclick="closePlanSheet()">Huỷ</button>
+      <button class="save" onclick="savePlanSheet()">Lưu</button>
+    </div>
+  </div>
+</div>
+
 <div id="sheet-overlay">
   <div id="sheet">
     <h3 id="sheet-title">Chỉnh sửa ô</h3>
@@ -526,10 +610,6 @@ let currentEdit = null;
 let copiedRoster = null;
 let editMode = false;
 
-// ====== MÃ PIN ĐỂ VÀO CHẾ ĐỘ CHỈNH SỬA (đổi số này để đổi mã) ======
-const EDIT_PIN = '12358';
-// ====================================================================
-
 // ====== DANH SÁCH CÁC LỚP ======
 const CLASS_IDS = ['piano', 'mua', 've'];
 const CLASS_LABELS = { piano: 'Piano', mua: 'Múa', ve: 'Vẽ' };
@@ -551,9 +631,11 @@ const FIREBASE_CONFIG = {
 };
 const FIREBASE_ENABLED = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
 let db = null;
+let auth = null;
 if(FIREBASE_ENABLED){
   firebase.initializeApp(FIREBASE_CONFIG);
   db = firebase.firestore();
+  auth = firebase.auth();
 }
 // =================================================================
 
@@ -584,6 +666,12 @@ function defaultAdmissionLabels(){
   ];
 }
 
+function defaultPlanLevels(){
+  return [
+    {id:'plan-easy', name:'Dễ', color:'#743B1F'}
+  ];
+}
+
 function defaultDataFor(classId){
   if(classId === 'mua'){
     return {
@@ -594,6 +682,8 @@ function defaultDataFor(classId){
       theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
       admissionLabels: defaultAdmissionLabels(),
+      planLevels: defaultPlanLevels(),
+      plan: { entries: {}, rowKeys: [] },
       rows: emptyTemplateRows()
     };
   }
@@ -606,6 +696,8 @@ function defaultDataFor(classId){
       theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
       admissionLabels: defaultAdmissionLabels(),
+      planLevels: defaultPlanLevels(),
+      plan: { entries: {}, rowKeys: [] },
       rows: emptyTemplateRows()
     };
   }
@@ -622,6 +714,8 @@ function defaultDataFor(classId){
     theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
     levels: defaultLevels(),
     admissionLabels: defaultAdmissionLabels(),
+    planLevels: defaultPlanLevels(),
+    plan: { entries: {}, rowKeys: [] },
     rows: [
       {time:"9:00", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk(),mk(),mk(),mk(),mk("Thanh Hải (2ca)","Gia Linh (2ca)","*Hà Linh (2ca)","*Trường An","Anh Thư"),mk()]},
       {time:"9:30", statusOverride:new Array(DAYS).fill(null), cells:[mk(),mk(),mk(),mk(),mk(),mk("Ngọc Khánh (2ca)","*Đan Linh","Yến Mai (2ca)"),mk()]},
@@ -670,6 +764,35 @@ function migrateData(loaded, classId){
       return found ? { key: defLabel.key, text: found.text, color: found.color } : defLabel;
     });
   }
+  let planLevels = loaded.planLevels;
+  if(!planLevels || !planLevels.length){
+    planLevels = def.planLevels;
+  }
+  const plan = (loaded.plan && typeof loaded.plan === 'object' && loaded.plan.entries)
+    ? loaded.plan
+    : { entries: {}, rowKeys: [] };
+  if(!plan.entries) plan.entries = {};
+  if(!plan.rowKeys || !Array.isArray(plan.rowKeys) || plan.rowKeys.length === 0){
+    // Dữ liệu từ trước khi có nút Đồng bộ: tự tạo danh sách hàng từ các mục đã nhập, để không bị mất hàng đang hiển thị
+    plan.rowKeys = Object.keys(plan.entries).map(k => {
+      if(classId === 'mua'){
+        const lvl = levels.find(l => l.id === k);
+        return { key: k, label: lvl ? lvl.name : k };
+      }
+      return { key: k, label: k };
+    });
+  }
+  Object.keys(plan.entries).forEach(k => {
+    const entry = plan.entries[k];
+    ['col1', 'col2', 'col3'].forEach(colKey => {
+      if(Array.isArray(entry[colKey])){
+        entry[colKey] = entry[colKey].map(item => ({
+          text: item.text,
+          levelId: item.levelId || (planLevels[0] ? planLevels[0].id : '')
+        }));
+      }
+    });
+  });
   return {
     orgName: loaded.orgName ?? def.orgName,
     title: loaded.title ?? def.title,
@@ -678,6 +801,8 @@ function migrateData(loaded, classId){
     theme: { ...def.theme, ...(loaded.theme || {}) },
     levels,
     admissionLabels,
+    planLevels,
+    plan,
     rows: migrateRows(loaded.rows ?? def.rows, levels[0]?.id)
   };
 }
@@ -900,35 +1025,57 @@ function setEditMode(on){
   document.getElementById('btn-theme').style.display = on ? '' : 'none';
   document.getElementById('btn-exit-edit').style.display = on ? '' : 'none';
   document.getElementById('btn-reset-status').style.display = on ? '' : 'none';
+  document.getElementById('btn-sync-plan').style.display = on ? '' : 'none';
   ['orgName','title','monthYear'].forEach(id => {
     document.getElementById(id).contentEditable = on ? 'true' : 'false';
   });
-  render();
+  if(data) render();
 }
 
 function requestEditMode(){
-  document.getElementById('pin-input').value = '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').style.display = 'none';
   document.getElementById('pin-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('pin-input').focus(), 50);
+  setTimeout(() => document.getElementById('login-email').focus(), 50);
 }
 
 function closePinSheet(){
   document.getElementById('pin-overlay').classList.remove('open');
 }
 
-function submitPin(){
-  const val = document.getElementById('pin-input').value;
-  if(val === EDIT_PIN){
-    closePinSheet();
-    setEditMode(true);
-    showStatus('Đã mở chế độ chỉnh sửa');
-  } else {
-    showStatus('Mã PIN không đúng');
+function submitLogin(){
+  if(!FIREBASE_ENABLED || !auth){
+    showStatus('Chưa kết nối được hệ thống đăng nhập');
+    return;
   }
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.display = 'none';
+  if(!email || !password){
+    errorEl.textContent = 'Vui lòng nhập đầy đủ email và mật khẩu';
+    errorEl.style.display = 'block';
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      closePinSheet();
+      showStatus('Đã mở chế độ chỉnh sửa');
+      // setEditMode(true) sẽ được gọi tự động qua onAuthStateChanged
+    })
+    .catch((err) => {
+      let msg = 'Đăng nhập thất bại';
+      if(err.code === 'auth/invalid-email') msg = 'Email không hợp lệ';
+      else if(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'Sai email hoặc mật khẩu';
+      else if(err.code === 'auth/too-many-requests') msg = 'Sai quá nhiều lần, vui lòng thử lại sau';
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    });
 }
 
-document.getElementById('pin-input').addEventListener('keydown', (e) => {
-  if(e.key === 'Enter'){ e.preventDefault(); submitPin(); }
+document.getElementById('login-password').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){ e.preventDefault(); submitLogin(); }
 });
 
 document.getElementById('pin-overlay').addEventListener('click', (e) => {
@@ -936,8 +1083,18 @@ document.getElementById('pin-overlay').addEventListener('click', (e) => {
 });
 
 function exitEditMode(){
-  setEditMode(false);
+  if(FIREBASE_ENABLED && auth){
+    auth.signOut();
+  } else {
+    setEditMode(false);
+  }
   showStatus('Đã thoát chế độ chỉnh sửa');
+}
+
+if(FIREBASE_ENABLED && auth){
+  auth.onAuthStateChanged((user) => {
+    setEditMode(!!user);
+  });
 }
 
 function switchClass(classId){
@@ -968,7 +1125,9 @@ function switchView(view){
   });
   document.getElementById('view-schedule').style.display = view === 'schedule' ? '' : 'none';
   document.getElementById('view-admissions').style.display = view === 'admissions' ? '' : 'none';
+  document.getElementById('view-plan').style.display = view === 'plan' ? '' : 'none';
   if(view === 'admissions') renderAdmissions();
+  if(view === 'plan') renderPlan();
 }
 
 let currentTimeEdit = null;
@@ -1311,6 +1470,323 @@ function renderAdmissionsLegend(){
   container.appendChild(box);
 }
 
+// ====== KẾ HOẠCH HỌC TẬP ======
+const PLAN_COLUMNS = {
+  piano: ['Kỳ học', 'Nội dung học tập', 'Ghi chú'],
+  ve: ['Kỳ học', 'Nội dung học tập', 'Ghi chú'],
+  mua: ['Kỹ thuật', 'Tác phẩm', 'Ghi chú']
+};
+const PLAN_LOCKED_LABEL = { piano: 'Học sinh', ve: 'Học sinh', mua: 'Tên lớp' };
+const PLAN_COL_KEYS = ['col1', 'col2', 'col3'];
+
+// Danh sách "sống" lấy trực tiếp từ Thời khoá biểu / Lịch tuyển sinh — chỉ dùng khi bấm nút Đồng bộ
+function computeLivePlanRows(classId){
+  if(classId === 'mua'){
+    return data.levels
+      .map(l => ({key: l.id, label: l.name}))
+      .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+  }
+  return getAllKnownNames()
+    .map(n => ({key: n, label: n}))
+    .sort((a, b) => {
+      const lastA = a.label.trim().split(/\s+/).pop();
+      const lastB = b.label.trim().split(/\s+/).pop();
+      return lastA.localeCompare(lastB, 'vi');
+    });
+}
+
+// Danh sách hàng THỰC TẾ hiển thị — lấy từ dữ liệu đã lưu (plan.rowKeys), không tự đổi khi TKB/Lịch tuyển sinh bị sửa
+function getPlanRows(classId){
+  const rowKeys = (data.plan && data.plan.rowKeys) || [];
+  const sorted = rowKeys.slice();
+  if(classId === 'mua'){
+    sorted.sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+  } else {
+    sorted.sort((a, b) => {
+      const lastA = a.label.trim().split(/\s+/).pop();
+      const lastB = b.label.trim().split(/\s+/).pop();
+      return lastA.localeCompare(lastB, 'vi');
+    });
+  }
+  return sorted;
+}
+
+function syncPlanRows(){
+  const label = currentClassId === 'mua' ? 'lớp' : 'học sinh';
+  if(!confirm(`Đồng bộ danh sách ${label} từ Thời khoá biểu / Lịch tuyển sinh?\n\n${label.charAt(0).toUpperCase()+label.slice(1)} mới sẽ được thêm vào bảng. Dữ liệu bạn đã nhập trước đó sẽ không bị mất hay bị xoá.`)) return;
+  if(!data.plan) data.plan = { entries: {}, rowKeys: [] };
+  if(!data.plan.rowKeys) data.plan.rowKeys = [];
+  const live = computeLivePlanRows(currentClassId);
+  let addedCount = 0;
+  live.forEach(r => {
+    const existing = data.plan.rowKeys.find(x => x.key === r.key);
+    if(existing){
+      existing.label = r.label; // cập nhật lại tên hiển thị mới nhất (vd. đổi tên trình độ)
+    } else {
+      data.plan.rowKeys.push({key: r.key, label: r.label});
+      addedCount++;
+    }
+  });
+  bumpUpdated();
+  renderPlan();
+  saveData();
+  showStatus(addedCount > 0 ? `Đã đồng bộ, thêm ${addedCount} dòng mới` : 'Đã đồng bộ, không có dòng mới');
+}
+
+function planLevelColor(levelId){
+  const lvl = (data.planLevels || []).find(l => l.id === levelId);
+  if(lvl) return lvl.color;
+  return data.planLevels && data.planLevels[0] ? data.planLevels[0].color : '#743B1F';
+}
+
+function planTitle(){
+  if(data.title.indexOf('Thời khoá biểu') !== -1){
+    return data.title.replace('Thời khoá biểu', 'Kế hoạch học tập');
+  }
+  return 'Kế hoạch học tập - ' + data.title;
+}
+
+function renderPlan(){
+  if(!document.getElementById('plan-orgName')) return;
+  document.getElementById('plan-orgName').textContent = data.orgName;
+  document.getElementById('plan-title').textContent = planTitle();
+  document.getElementById('plan-monthYear').textContent = data.monthYear;
+  document.getElementById('plan-updated-date').textContent = data.updatedDate;
+
+  const cols = PLAN_COLUMNS[currentClassId] || PLAN_COLUMNS.piano;
+  const lockedLabel = PLAN_LOCKED_LABEL[currentClassId] || 'Học sinh';
+  document.getElementById('plan-col0-header').textContent = lockedLabel;
+  document.getElementById('plan-col1-header').textContent = cols[0];
+  document.getElementById('plan-col2-header').textContent = cols[1];
+  document.getElementById('plan-col3-header').textContent = cols[2];
+
+  if(!data.plan) data.plan = { entries: {}, rowKeys: [] };
+  if(!data.plan.entries) data.plan.entries = {};
+  if(!data.plan.rowKeys) data.plan.rowKeys = [];
+  if(!data.planLevels || !data.planLevels.length) data.planLevels = defaultPlanLevels();
+
+  const rows = getPlanRows(currentClassId);
+  const gridBody = document.getElementById('plan-grid-body');
+  gridBody.innerHTML = '';
+
+  rows.forEach(row => {
+    const lockedCell = document.createElement('div');
+    lockedCell.className = 'time-cell plan-locked-cell';
+    lockedCell.textContent = row.label;
+    lockedCell.onclick = () => {
+      if(editMode) showStatus('Ô này đồng bộ từ trang khác, không thể chỉnh sửa ở đây');
+    };
+    gridBody.appendChild(lockedCell);
+
+    PLAN_COL_KEYS.forEach((colKey, idx) => {
+      const cell = document.createElement('div');
+      cell.className = 'day-cell' + (idx === PLAN_COL_KEYS.length - 1 ? ' last-col' : '');
+      cell.onclick = () => { if(editMode) openPlanSheet(row.key, row.label, colKey, cols[idx]); };
+      const entry = data.plan.entries[row.key];
+      const lines = (entry && entry[colKey]) || [];
+      cell.innerHTML = lines.map(l =>
+        `<span class="cell-line plan-cell-line" data-plan-level-id="${l.levelId || ''}" style="color:${planLevelColor(l.levelId)}">${escapeHtml(l.text)}</span>`
+      ).join('');
+      gridBody.appendChild(cell);
+    });
+  });
+
+  renderPlanLegend();
+  applyPlanColumnWidths();
+}
+
+function renderPlanLegend(){
+  const container = document.getElementById('plan-legend-row');
+  if(!container) return;
+  container.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'legend-levels';
+
+  (data.planLevels || []).forEach(level => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <span class="legend-swatch" style="background:${level.color}"></span>
+      <input type="color" class="level-color-input" value="${level.color}">
+      <span class="legend-text" contenteditable="${editMode}">${escapeHtml(level.name)}</span>
+      ${editMode && data.planLevels.length > 1 ? '<button class="level-del" title="Xoá trình độ">−</button>' : ''}
+    `;
+    const swatch = item.querySelector('.legend-swatch');
+    const colorInput = item.querySelector('.level-color-input');
+    const nameSpan = item.querySelector('.legend-text');
+    if(editMode){
+      swatch.style.cursor = 'pointer';
+      swatch.onclick = () => colorInput.click();
+      colorInput.addEventListener('input', (e) => {
+        // Cập nhật trực tiếp, KHÔNG render lại toàn bộ (nếu không bảng chọn màu sẽ tự đóng)
+        level.color = e.target.value;
+        swatch.style.background = e.target.value;
+        document.querySelectorAll(`#plan-grid-body .cell-line[data-plan-level-id="${level.id}"]`).forEach(el => {
+          el.style.color = e.target.value;
+        });
+      });
+      colorInput.addEventListener('change', () => {
+        bumpUpdated();
+        renderPlan();
+        saveData();
+      });
+      nameSpan.addEventListener('blur', (e) => {
+        const newText = e.target.textContent.trim();
+        if(newText) level.name = newText;
+        bumpUpdated();
+        renderPlan();
+        saveData();
+      });
+      nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+      const delBtn = item.querySelector('.level-del');
+      if(delBtn) delBtn.onclick = () => removePlanLevel(level.id);
+    } else {
+      swatch.style.cursor = 'default';
+    }
+    box.appendChild(item);
+  });
+
+  if(editMode){
+    const addBtn = document.createElement('button');
+    addBtn.className = 'level-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'Thêm mức độ';
+    addBtn.onclick = addPlanLevel;
+    box.appendChild(addBtn);
+  }
+  container.appendChild(box);
+}
+
+function addPlanLevel(){
+  const palette = ['#2e7d32', '#c98a1a', '#c0392b', '#1565c0', '#6a1b9a', '#00838f', '#5d4037'];
+  const used = (data.planLevels || []).map(l => l.color);
+  const nextColor = palette.find(c => !used.includes(c)) || palette[data.planLevels.length % palette.length];
+  const id = 'plan-lvl-' + Date.now();
+  data.planLevels.push({id, name: 'Mức độ mới', color: nextColor});
+  bumpUpdated();
+  renderPlan();
+  saveData();
+  showStatus('Đã thêm mức độ');
+}
+
+function removePlanLevel(levelId){
+  if(data.planLevels.length <= 1){
+    showStatus('Cần giữ lại ít nhất 1 mức độ');
+    return;
+  }
+  if(!confirm('Xoá mức độ này? Nội dung đang dùng mức độ này sẽ chuyển sang mức độ đầu tiên.')) return;
+  const fallback = data.planLevels.find(l => l.id !== levelId);
+  data.planLevels = data.planLevels.filter(l => l.id !== levelId);
+  Object.values(data.plan.entries || {}).forEach(entry => {
+    PLAN_COL_KEYS.forEach(colKey => {
+      (entry[colKey] || []).forEach(item => {
+        if(item.levelId === levelId) item.levelId = fallback.id;
+      });
+    });
+  });
+  bumpUpdated();
+  renderPlan();
+  saveData();
+  showStatus('Đã xoá mức độ');
+}
+
+function applyPlanColumnWidths(){
+  const grid = document.getElementById('plan-grid');
+  if(!grid) return;
+  const rows = getPlanRows(currentClassId);
+  const headerLabel = PLAN_LOCKED_LABEL[currentClassId] || 'Học sinh';
+  let lockedWidth = measureTextPx(headerLabel) + 28;
+  rows.forEach(r => {
+    const w = measureTextPx(r.label) + 28;
+    if(w > lockedWidth) lockedWidth = w;
+  });
+  if(lockedWidth < 100) lockedWidth = 100;
+  grid.style.gridTemplateColumns = `${Math.ceil(lockedWidth)}px 1fr 1fr 1fr`;
+}
+
+let currentPlanEdit = null;
+
+function openPlanSheet(key, label, colKey, colLabel){
+  currentPlanEdit = { key, colKey };
+  document.getElementById('plan-sheet-title').textContent = `${label} · ${colLabel}`;
+  const editor = document.getElementById('plan-line-editor');
+  editor.innerHTML = '';
+  const entry = (data.plan.entries && data.plan.entries[key]) || {};
+  const lines = entry[colKey] || [];
+  if(lines.length === 0){
+    addPlanLineRow('', data.planLevels[0] ? data.planLevels[0].id : '');
+  } else {
+    lines.forEach(l => addPlanLineRow(l.text, l.levelId));
+  }
+  document.getElementById('plan-sheet-overlay').classList.add('open');
+}
+
+function addPlanLineRow(text, levelId){
+  const editor = document.getElementById('plan-line-editor');
+  const row = document.createElement('div');
+  row.className = 'plan-line-row';
+  const initialId = levelId || (data.planLevels[0] ? data.planLevels[0].id : '');
+  const initialColor = planLevelColor(initialId);
+  row.innerHTML = `
+    <span class="drag-handle">⠿</span>
+    <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cyclePlanLevel(this)"></div>
+    <div class="input-wrap"><textarea rows="1"></textarea></div>
+    <button class="del-line" onclick="this.parentElement.remove()">✕</button>
+  `;
+  editor.appendChild(row);
+  const textarea = row.querySelector('textarea');
+  textarea.value = text;
+  const autoGrow = () => { textarea.style.height = 'auto'; textarea.style.height = textarea.scrollHeight + 'px'; };
+  textarea.addEventListener('input', autoGrow);
+  setTimeout(autoGrow, 0);
+  makeRowDraggable(row, 'plan-line-editor', '.plan-line-row');
+}
+
+function cyclePlanLevel(el){
+  const ids = (data.planLevels || []).map(l => l.id);
+  if(ids.length === 0) return;
+  let idx = ids.indexOf(el.dataset.levelId);
+  idx = (idx + 1) % ids.length;
+  const nextId = ids[idx];
+  el.dataset.levelId = nextId;
+  el.style.background = planLevelColor(nextId);
+}
+
+function addPlanLine(){
+  addPlanLineRow('', data.planLevels[0] ? data.planLevels[0].id : '');
+}
+
+function closePlanSheet(){
+  document.getElementById('plan-sheet-overlay').classList.remove('open');
+  currentPlanEdit = null;
+}
+
+function savePlanSheet(){
+  if(!currentPlanEdit) return;
+  const rows = document.querySelectorAll('#plan-line-editor .plan-line-row');
+  const newLines = [];
+  rows.forEach(r => {
+    const text = r.querySelector('textarea').value.trim();
+    if(text){
+      const levelId = r.querySelector('.color-toggle').dataset.levelId;
+      newLines.push({text, levelId});
+    }
+  });
+  if(!data.plan) data.plan = { entries: {}, rowKeys: [] };
+  if(!data.plan.entries) data.plan.entries = {};
+  if(!data.plan.entries[currentPlanEdit.key]) data.plan.entries[currentPlanEdit.key] = {};
+  data.plan.entries[currentPlanEdit.key][currentPlanEdit.colKey] = newLines;
+  bumpUpdated();
+  renderPlan();
+  saveData();
+  closePlanSheet();
+  showStatus('Đã lưu');
+}
+
+document.getElementById('plan-sheet-overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'plan-sheet-overlay') closePlanSheet();
+});
+
 function render(){
   document.getElementById('orgName').textContent = data.orgName;
   document.getElementById('title').textContent = data.title;
@@ -1342,6 +1818,7 @@ function render(){
   renderLegend();
   applyColumnWidths();
   renderAdmissions();
+  renderPlan();
 }
 
 function renderLegend(){
@@ -1419,6 +1896,7 @@ function updateLevelName(levelId, name){
   if(!lvl || !name) return;
   lvl.name = name;
   bumpUpdated();
+  renderPlan();
   saveData();
 }
 
@@ -1533,7 +2011,9 @@ function addLineRow(text, levelId){
   makeRowDraggable(row);
 }
 
-function makeRowDraggable(row){
+function makeRowDraggable(row, editorId, rowSelector){
+  editorId = editorId || 'line-editor';
+  rowSelector = rowSelector || '.line-row';
   const handle = row.querySelector('.drag-handle');
   let dragging = false;
 
@@ -1546,8 +2026,8 @@ function makeRowDraggable(row){
   function onMove(e){
     if(!dragging) return;
     if(e.cancelable) e.preventDefault();
-    const editor = document.getElementById('line-editor');
-    const siblings = Array.from(editor.querySelectorAll('.line-row')).filter(r => r !== row);
+    const editor = document.getElementById(editorId);
+    const siblings = Array.from(editor.querySelectorAll(rowSelector)).filter(r => r !== row);
     const y = getY(e);
     let inserted = false;
     for(const sib of siblings){
@@ -1721,7 +2201,8 @@ document.getElementById('monthYear').addEventListener('keydown', preventEnter);
 function exportFilename(){
   const label = (CLASS_LABELS[currentClassId] || currentClassId).toUpperCase();
   const safeDate = data.updatedDate.replace(/\//g, '');
-  const prefix = currentView === 'admissions' ? 'LichTuyenSinh' : 'Thoikhoabieu';
+  const prefixMap = { admissions: 'LichTuyenSinh', plan: 'KeHoachHocTap', schedule: 'Thoikhoabieu' };
+  const prefix = prefixMap[currentView] || 'Thoikhoabieu';
   return `${prefix}_${label}_${safeDate}.png`;
 }
 
@@ -1735,7 +2216,8 @@ function isIOSDevice(){
 
 async function exportImage(){
   showStatus('Đang tạo ảnh...');
-  const el = document.getElementById(currentView === 'admissions' ? 'admissions-capture-area' : 'capture-area');
+  const captureIdMap = { admissions: 'admissions-capture-area', plan: 'plan-capture-area', schedule: 'capture-area' };
+  const el = document.getElementById(captureIdMap[currentView] || 'capture-area');
   el.classList.add('exporting');
   try{
     if(document.fonts && document.fonts.ready){
