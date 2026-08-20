@@ -129,9 +129,11 @@
   .plan-cell-line{white-space:normal;word-break:break-word;text-align:left;}
 
   .legend-row{
-    display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:18px 48px 28px;border-top:1px solid var(--row-border);
+    display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;
+    padding:18px 48px 28px;border-top:1px solid var(--row-border);
   }
   .legend-levels{display:flex;gap:18px;flex-wrap:wrap;align-items:center;}
+  .legend-count{font-size:12.5px;color:var(--legend-text);white-space:nowrap;}
   .legend-item{display:flex;align-items:center;gap:7px;}
   .legend-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;cursor:pointer;}
   .level-color-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
@@ -933,6 +935,14 @@ function renderPlanLegend(){
     box.appendChild(addBtn);
   }
   container.appendChild(box);
+
+  const countEl = document.createElement('div');
+  countEl.className = 'legend-count';
+  const rowCount = getPlanRows(currentClassId).length;
+  countEl.textContent = currentClassId === 'mua'
+    ? `Số lớp: ${rowCount} lớp`
+    : `Sĩ số: ${rowCount} học sinh`;
+  container.appendChild(countEl);
 }
 
 function addPlanLevel(){
