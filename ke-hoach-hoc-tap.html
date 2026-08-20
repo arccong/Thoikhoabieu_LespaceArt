@@ -122,10 +122,10 @@
   .plan-locked-cell{cursor:default;font-weight:700;}
   .day-cell{
     background:var(--cell-bg);border-top:1px solid var(--row-border);border-left:1px solid var(--row-border);
-    padding:10px 5px;display:flex;flex-direction:column;gap:5px;min-height:32px;cursor:pointer;
+    padding:14px 12px;display:flex;flex-direction:column;gap:6px;min-height:32px;cursor:pointer;
   }
   .day-cell.last-col{border-right:1px solid var(--row-border);}
-  .cell-line{display:block;font-weight:600;font-size:16px;line-height:1.28;padding:2px 3px;font-family:'Work Sans',sans-serif;}
+  .cell-line{display:block;font-weight:600;font-size:16px;line-height:1.28;padding:3px 4px;font-family:'Work Sans',sans-serif;}
   .plan-cell-line{white-space:normal;word-break:break-word;text-align:left;}
 
   .legend-row{
@@ -236,13 +236,23 @@
   .sheet-actions .cancel:hover{background:var(--sand);}
 
   #plan-line-editor{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
-  .plan-line-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+  .plan-line-row{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+  .plan-line-controls{display:flex;align-items:center;gap:6px;}
   .drag-handle{
     cursor:grab;color:var(--muted);font-size:20px;padding:6px 8px;flex-shrink:0;
     touch-action:none;user-select:none;-webkit-user-select:none;line-height:1;
   }
   .color-toggle{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;flex-shrink:0;}
-  .input-wrap{flex:1;}
+  .style-toggle-group{display:flex;gap:4px;flex-shrink:0;}
+  .style-btn{
+    width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;
+  }
+  .style-btn[data-style="italic"]{font-style:italic;}
+  .style-btn.active{background:var(--maroon);color:#fff;border-color:var(--maroon);}
+  .plan-line-controls .del-line{margin-left:auto;}
+  .input-wrap{flex:1;width:100%;}
   .plan-line-row textarea{
     width:100%;padding:9px 10px;border-radius:8px;border:none;background:#f4eee1;font-size:14px;
     font-family:'Montserrat',sans-serif;resize:vertical;min-height:38px;outline:none;
@@ -813,6 +823,12 @@ function planLevelColor(levelId){
   return data.planLevels && data.planLevels[0] ? data.planLevels[0].color : '#743B1F';
 }
 
+function planStyleCss(style){
+  if(style === 'bold') return 'font-weight:700;font-style:normal;';
+  if(style === 'italic') return 'font-weight:400;font-style:italic;';
+  return 'font-weight:400;font-style:normal;'; // regular
+}
+
 function planTitle(){
   if(data.title.indexOf('Thời khoá biểu') !== -1) return data.title.replace('Thời khoá biểu', 'Kế hoạch học tập');
   return 'Kế hoạch học tập - ' + data.title;
@@ -855,7 +871,7 @@ function render(){
       const entry = data.plan.entries[row.key];
       const lines = (entry && entry[colKey]) || [];
       cell.innerHTML = lines.map(l =>
-        `<span class="cell-line plan-cell-line" data-plan-level-id="${l.levelId || ''}" style="color:${planLevelColor(l.levelId)}">${escapeHtml(l.text)}</span>`
+        `<span class="cell-line plan-cell-line" data-plan-level-id="${l.levelId || ''}" style="color:${planLevelColor(l.levelId)};${planStyleCss(l.style)}">${escapeHtml(l.text)}</span>`
       ).join('');
       gridBody.appendChild(cell);
     });
@@ -971,21 +987,21 @@ function applyPlanColumnWidths(){
   rows.forEach(r => { const w = measureTextPx(r.label) + PAD; if(w > lockedWidth) lockedWidth = w; });
 
   // Cột 1: Kỳ học (Piano/Vẽ) — co khít 1 hàng trên Desktop, thu gọn cố định (cho phép 2 dòng) trên Mobile
-  //        Kỹ thuật (Múa) — co khít theo nội dung, tối thiểu 400px, tối đa 574px
+  //        Kỹ thuật (Múa) — co khít theo nội dung, tối thiểu 372px, tối đa 574px
   let col1Width;
   if(isDateRangeColumn('col1')){
     col1Width = isMobile ? 120 : widestContent('col1', cols[0]);
   } else {
-    col1Width = Math.min(574, Math.max(400, widestContent('col1', cols[0])));
+    col1Width = Math.min(574, Math.max(372, widestContent('col1', cols[0])));
   }
 
   // Cột 2: Nội dung học tập (Piano/Vẽ) — co khít, tối thiểu 523px, tối đa 574px
-  //        Tác phẩm (Múa) — co khít theo nội dung, tối thiểu 400px, tối đa 574px
+  //        Tác phẩm (Múa) — co khít theo nội dung, tối thiểu 284px, tối đa 396px
   let col2Width;
   if(currentClassId === 'piano' || currentClassId === 've'){
     col2Width = Math.min(574, Math.max(523, widestContent('col2', cols[1])));
   } else {
-    col2Width = Math.min(574, Math.max(400, widestContent('col2', cols[1])));
+    col2Width = Math.min(396, Math.max(284, widestContent('col2', cols[1])));
   }
 
   // Cột 3: Ghi chú — co khít theo nội dung, tối thiểu 105px, tối đa 155px
@@ -1031,7 +1047,7 @@ function openPlanSheet(key, label, colKey, colLabel){
   } else {
     lines.forEach(l => {
       if(dateMode) addPlanDateRangeRow(l.startDate || '', l.endDate || '', l.levelId);
-      else addPlanLineRow(l.text, l.levelId);
+      else addPlanLineRow(l.text, l.levelId, null, l.style);
     });
   }
   document.getElementById('plan-sheet-overlay').classList.add('open');
@@ -1051,23 +1067,40 @@ function addPlanDateRangeRow(startDate, endDate, levelId){
   editor.appendChild(row);
 }
 
-function addPlanLineRow(text, levelId, insertAfterEl){
+function addPlanLineRow(text, levelId, insertAfterEl, style){
   const editor = document.getElementById('plan-line-editor');
   const row = document.createElement('div');
   row.className = 'plan-line-row';
   const initialId = levelId || (data.planLevels[0] ? data.planLevels[0].id : '');
   const initialColor = planLevelColor(initialId);
+  const initialStyle = style || 'regular';
+  row.dataset.style = initialStyle;
   row.innerHTML = `
-    <span class="drag-handle">⠿</span>
-    <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cyclePlanLevel(this)"></div>
+    <div class="plan-line-controls">
+      <span class="drag-handle">⠿</span>
+      <div class="color-toggle" data-level-id="${initialId}" style="background:${initialColor}" onclick="cyclePlanLevel(this)"></div>
+      <div class="style-toggle-group">
+        <button type="button" class="style-btn" data-style="bold">B</button>
+        <button type="button" class="style-btn" data-style="regular">R</button>
+        <button type="button" class="style-btn" data-style="italic">I</button>
+      </div>
+      <button class="del-line" onclick="this.closest('.plan-line-row').remove()">✕</button>
+    </div>
     <div class="input-wrap"><textarea rows="1"></textarea></div>
-    <button class="del-line" onclick="this.parentElement.remove()">✕</button>
   `;
   if(insertAfterEl && insertAfterEl.parentNode === editor){
     insertAfterEl.after(row);
   } else {
     editor.appendChild(row);
   }
+  const styleBtns = row.querySelectorAll('.style-btn');
+  styleBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.style === initialStyle);
+    btn.addEventListener('click', () => {
+      row.dataset.style = btn.dataset.style;
+      styleBtns.forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
   const textarea = row.querySelector('textarea');
   textarea.value = text;
   const autoGrow = () => { textarea.style.height = 'auto'; textarea.style.height = textarea.scrollHeight + 'px'; };
@@ -1092,7 +1125,7 @@ function addPlanLineRow(text, levelId, insertAfterEl){
     autoGrow();
     let ref = row;
     for(let i = 1; i < parts.length; i++){
-      ref = addPlanLineRow(parts[i], initialId, ref);
+      ref = addPlanLineRow(parts[i], initialId, ref, row.dataset.style);
     }
   });
 
@@ -1107,7 +1140,7 @@ function addPlanLineRow(text, levelId, insertAfterEl){
       const after = value.slice(end);
       textarea.value = before;
       autoGrow();
-      const newRow = addPlanLineRow(after, initialId, row);
+      const newRow = addPlanLineRow(after, initialId, row, row.dataset.style);
       newRow.querySelector('textarea').focus();
     }
   });
@@ -1200,7 +1233,8 @@ function savePlanSheet(){
     } else {
       const levelId = r.querySelector('.color-toggle').dataset.levelId;
       const text = r.querySelector('textarea').value.trim();
-      if(text) newLines.push({text, levelId});
+      const style = r.dataset.style || 'regular';
+      if(text) newLines.push({text, levelId, style});
     }
   });
   if(!data.plan.entries[currentPlanEdit.key]) data.plan.entries[currentPlanEdit.key] = {};
