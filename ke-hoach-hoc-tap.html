@@ -945,14 +945,62 @@ function removePlanLevel(levelId){
 
 function applyPlanColumnWidths(){
   const grid = document.getElementById('plan-grid');
+  if(!grid) return;
   const rows = getPlanRows(currentClassId);
-  const headerLabel = PLAN_LOCKED_LABEL[currentClassId] || 'Học sinh';
-  let lockedWidth = measureTextPx(headerLabel) + 28;
-  rows.forEach(r => { const w = measureTextPx(r.label) + 28; if(w > lockedWidth) lockedWidth = w; });
-  if(lockedWidth < 100) lockedWidth = 100;
-  const MIN_CONTENT_COL = 170;
-  grid.style.gridTemplateColumns = `${Math.ceil(lockedWidth)}px minmax(${MIN_CONTENT_COL}px, 1fr) minmax(${MIN_CONTENT_COL}px, 1fr) minmax(${MIN_CONTENT_COL}px, 1fr)`;
+  const PAD = 28; // đệm ngang: padding ô + padding dòng + đệm an toàn
+  const isMobile = window.innerWidth <= 680;
+  const cols = PLAN_COLUMNS[currentClassId] || PLAN_COLUMNS.piano;
+
+  // Đo độ rộng nội dung dài nhất đang có trong 1 cột (kèm cả nhãn tiêu đề cột)
+  function widestContent(colKey, headerLabel){
+    let w = measureTextPx(headerLabel) + PAD;
+    rows.forEach(r => {
+      const entry = data.plan.entries[r.key];
+      const lines = (entry && entry[colKey]) || [];
+      lines.forEach(l => {
+        const lw = measureTextPx(l.text) + PAD;
+        if(lw > w) w = lw;
+      });
+    });
+    return w;
+  }
+
+  // Cột khoá: Học sinh / Tên lớp — co khít theo tên, tối đa 155px
+  const lockedLabel = PLAN_LOCKED_LABEL[currentClassId] || 'Học sinh';
+  let lockedWidth = measureTextPx(lockedLabel) + PAD;
+  rows.forEach(r => { const w = measureTextPx(r.label) + PAD; if(w > lockedWidth) lockedWidth = w; });
+  lockedWidth = Math.min(155, Math.max(100, lockedWidth));
+
+  // Cột 1: Kỳ học (Piano/Vẽ) — co khít 1 hàng trên Desktop, thu gọn cố định (cho phép 2 dòng) trên Mobile
+  //        Kỹ thuật (Múa) — co khít theo nội dung, không quy định min/max cụ thể
+  let col1Width;
+  if(isDateRangeColumn('col1')){
+    col1Width = isMobile ? 120 : widestContent('col1', cols[0]);
+  } else {
+    col1Width = Math.max(170, widestContent('col1', cols[0]));
+  }
+
+  // Cột 2: Nội dung học tập (Piano/Vẽ) — co khít, tối thiểu 523px, tối đa 574px
+  //        Tác phẩm (Múa) — co khít theo nội dung, không quy định min/max cụ thể
+  let col2Width;
+  if(currentClassId === 'piano' || currentClassId === 've'){
+    col2Width = Math.min(574, Math.max(523, widestContent('col2', cols[1])));
+  } else {
+    col2Width = Math.max(170, widestContent('col2', cols[1]));
+  }
+
+  // Cột 3: Ghi chú — co khít theo nội dung, tối thiểu 105px, tối đa 155px
+  const col3Width = Math.min(155, Math.max(105, widestContent('col3', cols[2])));
+
+  grid.style.gridTemplateColumns =
+    `${Math.ceil(lockedWidth)}px ${Math.ceil(col1Width)}px ${Math.ceil(col2Width)}px ${Math.ceil(col3Width)}px`;
 }
+
+let _planResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_planResizeTimer);
+  _planResizeTimer = setTimeout(() => { if(data) applyPlanColumnWidths(); }, 150);
+});
 
 function isDateRangeColumn(colKey){
   return (currentClassId === 'piano' || currentClassId === 've') && colKey === 'col1';
