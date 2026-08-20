@@ -72,8 +72,14 @@
     font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--maroon);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  @media (max-width:520px){
-    .view-tabs{margin-left:auto;}
+  @media (max-width:680px){
+    .app-header-text{display:none;}
+  }
+  @media (max-width:680px){
+    .app-header-right{display:contents;}
+    .app-header-left{order:1;}
+    #user-avatar-wrap{order:2;margin-left:auto;}
+    .view-tabs{order:3;flex-basis:100%;width:100%;justify-content:center;margin-top:2px;}
   }
 
   #app{max-width:1100px;margin:0 auto;padding:14px 10px 96px;}
@@ -293,7 +299,7 @@
   #pin-sheet{
     width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;text-align:center;
   }
-  .login-logo{width:120px;height:auto;margin-bottom:18px;}
+  .login-logo{height:56px;width:auto;margin-bottom:18px;}
   .login-title{
     font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--clay);margin:0 0 40px;
   }
