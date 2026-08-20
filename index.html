@@ -75,12 +75,6 @@
   @media (max-width:680px){
     .app-header-text{display:none;}
   }
-  @media (max-width:680px){
-    .app-header-right{display:contents;}
-    .app-header-left{order:1;}
-    #user-avatar-wrap{order:2;margin-left:auto;}
-    .view-tabs{order:3;flex-basis:100%;width:100%;justify-content:center;margin-top:2px;}
-  }
 
   #app{max-width:1100px;margin:0 auto;padding:14px 10px 96px;}
   .view-tabs{display:flex;gap:4px;background:var(--sand);padding:4px;border-radius:100px;flex-shrink:0;}
@@ -416,6 +410,23 @@
     font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:.15s;
   }
   #user-menu-signout:hover{background:var(--maroon);color:#fff;}
+
+  /* Bố cục header trên mobile: hàng trên = logo + avatar, hàng dưới = tab (căn giữa) */
+  @media (max-width:680px){
+    .app-header{
+      display:grid;
+      grid-template-columns:1fr auto;
+      grid-template-areas:
+        "logo avatar"
+        "tabs tabs";
+      align-items:center;
+      row-gap:10px;
+    }
+    .app-header-left{grid-area:logo;}
+    .app-header-right{display:contents;}
+    #user-avatar-wrap{grid-area:avatar;justify-self:end;}
+    .view-tabs{grid-area:tabs;justify-self:center;}
+  }
 </style>
 </head>
 <body class="view-mode">
