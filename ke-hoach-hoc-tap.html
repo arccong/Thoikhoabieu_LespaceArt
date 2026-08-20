@@ -1051,7 +1051,7 @@ function addPlanDateRangeRow(startDate, endDate, levelId){
   editor.appendChild(row);
 }
 
-function addPlanLineRow(text, levelId){
+function addPlanLineRow(text, levelId, insertAfterEl){
   const editor = document.getElementById('plan-line-editor');
   const row = document.createElement('div');
   row.className = 'plan-line-row';
@@ -1063,13 +1063,56 @@ function addPlanLineRow(text, levelId){
     <div class="input-wrap"><textarea rows="1"></textarea></div>
     <button class="del-line" onclick="this.parentElement.remove()">✕</button>
   `;
-  editor.appendChild(row);
+  if(insertAfterEl && insertAfterEl.parentNode === editor){
+    insertAfterEl.after(row);
+  } else {
+    editor.appendChild(row);
+  }
   const textarea = row.querySelector('textarea');
   textarea.value = text;
   const autoGrow = () => { textarea.style.height = 'auto'; textarea.style.height = textarea.scrollHeight + 'px'; };
   textarea.addEventListener('input', autoGrow);
   setTimeout(autoGrow, 0);
   makeRowDraggable(row);
+
+  // Dán nội dung nhiều dòng: dòng đầu điền vào ô hiện tại, các dòng còn lại tự tách thành dòng mới ngay bên dưới
+  textarea.addEventListener('paste', (e) => {
+    const clipboard = e.clipboardData || window.clipboardData;
+    if(!clipboard) return;
+    const pasteText = clipboard.getData('text');
+    if(!pasteText || pasteText.indexOf('\n') === -1) return; // không có xuống dòng thì dán bình thường
+    e.preventDefault();
+    const parts = pasteText.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+    if(parts.length === 0) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(end);
+    textarea.value = before + parts[0] + after;
+    autoGrow();
+    let ref = row;
+    for(let i = 1; i < parts.length; i++){
+      ref = addPlanLineRow(parts[i], initialId, ref);
+    }
+  });
+
+  // Gõ Enter khi đang nhập: tách nội dung sau con trỏ thành 1 dòng mới (giữ Shift+Enter để xuống dòng trong cùng ô)
+  textarea.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const value = textarea.value;
+      const before = value.slice(0, start);
+      const after = value.slice(end);
+      textarea.value = before;
+      autoGrow();
+      const newRow = addPlanLineRow(after, initialId, row);
+      newRow.querySelector('textarea').focus();
+    }
+  });
+
+  return row;
 }
 
 function makeRowDraggable(row){
