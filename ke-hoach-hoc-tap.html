@@ -719,7 +719,7 @@ function applyRoleUI(){
   } else {
     sel.style.display = '';
   }
-  backLink.style.display = (isAuthenticated && userRole === 'manager') ? '' : 'none';
+  backLink.style.display = (isAuthenticated && (userRole === 'manager' || userRole === 'teacher')) ? '' : 'none';
 }
 
 if(FIREBASE_ENABLED && auth){
@@ -1278,9 +1278,14 @@ async function exportImage(){
   el.classList.add('exporting');
   try{
     if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
-    const scaleFactor = Math.max(3, (window.devicePixelRatio || 1) * 2);
     const fullWidth = el.scrollWidth;
     const fullHeight = el.scrollHeight;
+    let scaleFactor = Math.max(3, (window.devicePixelRatio || 1) * 2);
+    // Giới hạn an toàn để tránh lỗi "canvas quá lớn" trên Safari/iOS khi bảng có nhiều hàng
+    const MAX_DIMENSION = 8000;
+    if(fullWidth * scaleFactor > MAX_DIMENSION) scaleFactor = MAX_DIMENSION / fullWidth;
+    if(fullHeight * scaleFactor > MAX_DIMENSION) scaleFactor = Math.min(scaleFactor, MAX_DIMENSION / fullHeight);
+    scaleFactor = Math.max(1.5, scaleFactor);
     const canvas = await html2canvas(el, {
       backgroundColor:'#fefbf7', scale: scaleFactor, useCORS: true, logging: false, imageTimeout: 0,
       width: fullWidth, height: fullHeight, windowWidth: fullWidth, windowHeight: fullHeight,

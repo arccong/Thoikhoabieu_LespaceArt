@@ -1272,12 +1272,6 @@ if(FIREBASE_ENABLED && auth){
       }
       isCheckingRole = false;
 
-      if(userRole === 'teacher'){
-        // Giáo viên không được xem trang Thời khoá biểu — tự động đưa về trang Kế hoạch học tập
-        window.location.replace('ke-hoach-hoc-tap.html');
-        return;
-      }
-
       setAppVisible(true);
       closePinSheet();
     } else {
@@ -2426,9 +2420,14 @@ async function exportImage(){
     if(document.fonts && document.fonts.ready){
       await document.fonts.ready;
     }
-    const scaleFactor = Math.max(3, (window.devicePixelRatio || 1) * 2);
     const fullWidth = el.scrollWidth;
     const fullHeight = el.scrollHeight;
+    let scaleFactor = Math.max(3, (window.devicePixelRatio || 1) * 2);
+    // Giới hạn an toàn để tránh lỗi "canvas quá lớn" trên Safari/iOS khi bảng có nhiều nội dung
+    const MAX_DIMENSION = 8000;
+    if(fullWidth * scaleFactor > MAX_DIMENSION) scaleFactor = MAX_DIMENSION / fullWidth;
+    if(fullHeight * scaleFactor > MAX_DIMENSION) scaleFactor = Math.min(scaleFactor, MAX_DIMENSION / fullHeight);
+    scaleFactor = Math.max(1.5, scaleFactor);
     const canvas = await html2canvas(el, {
       backgroundColor:'#fefbf7',
       scale: scaleFactor,
