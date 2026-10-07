@@ -255,6 +255,21 @@
     display:block;width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:1.5px solid var(--line);
     background:transparent;font-size:14px;font-weight:700;cursor:pointer;text-align:center;
   }
+  .status-option-row{display:flex;align-items:stretch;gap:6px;margin-bottom:8px;}
+  .status-option-row .status-option-btn{flex:1;margin-bottom:0;min-width:0;}
+  .status-option-row input.status-name-input{
+    flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1.5px solid var(--clay);
+    font:inherit;font-size:14px;font-weight:700;text-align:center;outline:none;background:#fff;
+  }
+  .status-icon-btn{
+    flex:0 0 40px;border-radius:10px;border:1.5px solid var(--border);background:transparent;
+    color:var(--muted);font-size:16px;line-height:1;cursor:pointer;padding:0;
+  }
+  .status-icon-btn:active{background:var(--sand);}
+  .status-add-btn{
+    display:block;width:100%;padding:10px;margin-bottom:8px;border-radius:10px;border:1.5px dashed var(--border);
+    background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;
+  }
   .status-option-btn.auto{border-style:dashed;color:var(--maroon-dark);border-color:var(--maroon);font-weight:600;}
   #plan-sheet-overlay{
     position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;justify-content:center;z-index:55;
@@ -1433,20 +1448,63 @@ function openStatusSheet(rIdx, dIdx){
   const row = data.rows[rIdx];
   document.getElementById('status-sheet-title').textContent = `${row.time} · ${DAY_LABELS[dIdx]}`;
 
+  renderStatusSheetOptions();
+  document.getElementById('status-sheet-overlay').classList.add('open');
+}
+
+// Vẽ lại danh sách lựa chọn trong dialog (dùng lại sau khi thêm / xoá / đổi tên trạng thái)
+function renderStatusSheetOptions(){
   const box = document.getElementById('status-options');
   box.innerHTML = '';
 
   const choices = orderedAdmissionLabels(); // {key, text, color}
+  const canDeleteAny = currentClassId === 'mua' ? choices.length > 1 : true;
 
   choices.forEach(opt => {
+    const row = document.createElement('div');
+    row.className = 'status-option-row';
+
     const btn = document.createElement('button');
     btn.className = 'status-option-btn';
     btn.textContent = opt.text;
     btn.style.borderColor = opt.color;
     btn.style.color = opt.color;
     btn.onclick = () => chooseStatus(opt.key);
-    box.appendChild(btn);
+    row.appendChild(btn);
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'status-icon-btn';
+    editBtn.textContent = '✎';
+    editBtn.title = 'Sửa tên trạng thái';
+    editBtn.onclick = () => startRenameStatus(row, btn, editBtn, opt);
+    row.appendChild(editBtn);
+
+    if(!isBuiltInStatusKey(opt.key) && canDeleteAny){
+      const delBtn = document.createElement('button');
+      delBtn.className = 'status-icon-btn';
+      delBtn.textContent = '−';
+      delBtn.title = 'Xoá trạng thái';
+      delBtn.onclick = () => {
+        removeAdmissionLabel(opt.key);
+        renderStatusSheetOptions();
+      };
+      row.appendChild(delBtn);
+    }
+    box.appendChild(row);
   });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'status-add-btn';
+  addBtn.textContent = '+ Thêm trạng thái';
+  addBtn.onclick = () => {
+    addAdmissionLabel();
+    renderStatusSheetOptions();
+    const inputs = box.querySelectorAll('.status-option-row');
+    const last = inputs[inputs.length - 1];
+    const editLast = last && last.querySelector('.status-icon-btn');
+    if(editLast) editLast.click(); // mở sẵn ô sửa tên cho trạng thái vừa thêm
+  };
+  box.appendChild(addBtn);
 
   const blankBtn = document.createElement('button');
   blankBtn.className = 'status-option-btn';
@@ -1454,13 +1512,44 @@ function openStatusSheet(rIdx, dIdx){
   blankBtn.onclick = () => chooseStatus('BLANK');
   box.appendChild(blankBtn);
 
-  const autoBtn = document.createElement('button');
-  autoBtn.className = 'status-option-btn auto';
-  autoBtn.textContent = '🔄 Tự động theo quy tắc';
-  autoBtn.onclick = () => chooseStatus(null);
-  box.appendChild(autoBtn);
+  if(currentClassId !== 'mua'){
+    const autoBtn = document.createElement('button');
+    autoBtn.className = 'status-option-btn auto';
+    autoBtn.textContent = '🔄 Tự động theo quy tắc';
+    autoBtn.onclick = () => chooseStatus(null);
+    box.appendChild(autoBtn);
+  }
+}
 
-  document.getElementById('status-sheet-overlay').classList.add('open');
+function startRenameStatus(row, btn, editBtn, label){
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'status-name-input';
+  input.value = label.text;
+  input.maxLength = 40;
+  let done = false;
+  const commit = (save) => {
+    if(done) return;
+    done = true;
+    const newText = input.value.trim();
+    if(save && newText && newText !== label.text){
+      label.text = newText;
+      bumpUpdated();
+      renderAdmissions();
+      saveData();
+      showStatus('Đã đổi tên trạng thái');
+    }
+    renderStatusSheetOptions();
+  };
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); commit(true); }
+    else if(e.key === 'Escape'){ e.preventDefault(); commit(false); }
+  });
+  input.addEventListener('blur', () => commit(true));
+  row.replaceChild(input, btn);
+  editBtn.style.display = 'none';
+  input.focus();
+  input.select();
 }
 
 function chooseStatus(key){
