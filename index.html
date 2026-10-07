@@ -753,6 +753,14 @@ function defaultAdmissionLabels(){
   ];
 }
 
+// Trạng thái tuyển sinh của lớp Múa: danh sách riêng, độc lập với "trình độ" của Thời khoá biểu
+function defaultAdmissionLabelsMua(){
+  return [
+    {key:'adm-mua-1', text:'Tuyển sinh', color:'#2e7d32'},
+    {key:'adm-mua-2', text:'Full', color:'#c0392b'}
+  ];
+}
+
 function defaultPlanLevels(){
   return [
     {id:'plan-easy', name:'Dễ', color:'#743B1F'}
@@ -768,7 +776,8 @@ function defaultDataFor(classId){
       updatedDate: "02/07/2026",
       theme: { headerBg:'#EDE1D3', headerTextColor:'#743B1F', dayHeaderBg:'#F6F0E8', dayHeaderTextColor:'#743B1F' },
       levels: defaultLevels(),
-      admissionLabels: defaultAdmissionLabels(),
+      admissionLabels: defaultAdmissionLabelsMua(),
+      admissionIndependent: true,
       planLevels: defaultPlanLevels(),
       plan: { entries: {}, rowKeys: [] },
       rows: emptyTemplateRows()
@@ -844,11 +853,30 @@ function migrateData(loaded, classId){
       {id:'lvl-black', name: loaded.legendBlack ?? def.levels[1].name, color: def.levels[1].color}
     ];
   }
-  let admissionLabels = loaded.admissionLabels;
-  if(!admissionLabels || admissionLabels.length !== 3){
+  let admissionLabels;
+  let admissionIndependent = !!loaded.admissionIndependent;
+  let seedMuaFromLevels = false;
+  if(classId === 'mua'){
+    if(admissionIndependent && Array.isArray(loaded.admissionLabels) && loaded.admissionLabels.length){
+      admissionLabels = loaded.admissionLabels.map(l => ({ key: l.key, text: l.text, color: l.color }));
+    } else {
+      // Dữ liệu cũ: trạng thái Múa đang lấy theo "trình độ" của Thời khoá biểu.
+      // Chuyển một lần sang danh sách riêng (giữ nguyên tên/màu/khoá) để hiển thị không đổi.
+      admissionLabels = levels.map(l => ({ key: l.id, text: l.name, color: l.color }));
+      admissionIndependent = true;
+      seedMuaFromLevels = true;
+    }
+  } else {
+    // Piano/Vẽ: luôn có 3 trạng thái gốc (tự tính theo số học sinh) + các trạng thái người dùng tự thêm
+    const loadedLabels = Array.isArray(loaded.admissionLabels) ? loaded.admissionLabels : [];
     admissionLabels = def.admissionLabels.map(defLabel => {
-      const found = (loaded.admissionLabels || []).find(l => l.key === defLabel.key);
+      const found = loadedLabels.find(l => l.key === defLabel.key);
       return found ? { key: defLabel.key, text: found.text, color: found.color } : defLabel;
+    });
+    loadedLabels.forEach(l => {
+      if(l && l.key && !admissionLabels.some(x => x.key === l.key)){
+        admissionLabels.push({ key: l.key, text: l.text, color: l.color });
+      }
     });
   }
   let planLevels = loaded.planLevels;
@@ -880,6 +908,22 @@ function migrateData(loaded, classId){
       }
     });
   });
+  const migratedRows = migrateRows(loaded.rows ?? def.rows, levels[0]?.id);
+  if(seedMuaFromLevels){
+    // Giữ nguyên những gì đang hiển thị: ô nào đang tự lấy trình độ của học sinh đầu tiên thì ghi cố định thành trạng thái riêng
+    migratedRows.forEach(row => {
+      if(row.spacer) return;
+      for(let d=0; d<DAYS; d++){
+        const ov = row.statusOverride[d];
+        if(ov === null || ov === undefined){
+          const lines = (row.cells && row.cells[d]) || [];
+          if(lines.length && admissionLabels.some(l => l.key === lines[0].levelId)){
+            row.statusOverride[d] = lines[0].levelId;
+          }
+        }
+      }
+    });
+  }
   return {
     orgName: loaded.orgName ?? def.orgName,
     title: loaded.title ?? def.title,
@@ -888,9 +932,10 @@ function migrateData(loaded, classId){
     theme: { ...def.theme, ...(loaded.theme || {}) },
     levels,
     admissionLabels,
+    ...(classId === 'mua' ? { admissionIndependent: true } : {}),
     planLevels,
     plan,
-    rows: migrateRows(loaded.rows ?? def.rows, levels[0]?.id)
+    rows: migratedRows
   };
 }
 
@@ -1391,13 +1436,7 @@ function openStatusSheet(rIdx, dIdx){
   const box = document.getElementById('status-options');
   box.innerHTML = '';
 
-  let choices; // {key, text, color}
-  if(currentClassId === 'mua'){
-    choices = data.levels.map(l => ({key: l.id, text: l.name, color: l.color}));
-  } else {
-    const labels = data.admissionLabels || defaultAdmissionLabels();
-    choices = STATUS_KEY_ORDER.map(key => labels.find(l => l.key === key)).filter(Boolean);
-  }
+  const choices = orderedAdmissionLabels(); // {key, text, color}
 
   choices.forEach(opt => {
     const btn = document.createElement('button');
@@ -1522,23 +1561,29 @@ const STATUS_THRESHOLDS = {
 };
 const STATUS_KEY_ORDER = ['open','near','full']; // thứ tự hiển thị: thấp -> cao
 
+// Danh sách trạng thái tuyển sinh của lớp hiện tại (độc lập với trình độ của Thời khoá biểu).
+// Piano/Vẽ: 3 trạng thái gốc theo thứ tự thấp -> cao, sau đó là các trạng thái tự thêm. Múa: theo thứ tự đã tạo.
+function orderedAdmissionLabels(){
+  const labels = data.admissionLabels || (currentClassId === 'mua' ? defaultAdmissionLabelsMua() : defaultAdmissionLabels());
+  if(currentClassId === 'mua') return labels.slice();
+  const builtIn = STATUS_KEY_ORDER.map(key => labels.find(l => l.key === key)).filter(Boolean);
+  const extra = labels.filter(l => !STATUS_KEY_ORDER.includes(l.key));
+  return builtIn.concat(extra);
+}
+
+function isBuiltInStatusKey(key){
+  return currentClassId !== 'mua' && STATUS_KEY_ORDER.includes(key);
+}
+
 function resolveStatusByKey(key){
-  if(currentClassId === 'mua'){
-    const lvl = data.levels.find(l => l.id === key);
-    return lvl ? {key: lvl.id, text: lvl.name, color: lvl.color} : null;
-  }
-  const labels = data.admissionLabels || defaultAdmissionLabels();
-  const label = labels.find(l => l.key === key);
+  const label = orderedAdmissionLabels().find(l => l.key === key);
   return label ? {key: label.key, text: label.text, color: label.color} : null;
 }
 
 function computeAutoStatus(classId, row, dayIdx){
   const lines = (row.cells && row.cells[dayIdx]) || [];
   const count = lines.length;
-  if(classId === 'mua'){
-    if(count === 0) return null;
-    return resolveStatusByKey(lines[0].levelId);
-  }
+  if(classId === 'mua') return null; // Múa: trạng thái chỉ đặt thủ công, không phụ thuộc Thời khoá biểu
   const thresholds = STATUS_THRESHOLDS[classId];
   if(!thresholds) return null;
   for(const t of thresholds){
@@ -1610,27 +1655,15 @@ function renderAdmissionsLegend(){
   const box = document.createElement('div');
   box.className = 'legend-levels';
 
-  if(currentClassId === 'mua'){
-    data.levels.forEach(l => {
-      const item = document.createElement('div');
-      item.className = 'legend-item';
-      item.innerHTML = `<span class="legend-swatch" style="background:${l.color}"></span><span class="legend-text">${escapeHtml(l.name)}</span>`;
-      box.appendChild(item);
-    });
-    container.appendChild(box);
-    return;
-  }
-
-  const labels = data.admissionLabels || defaultAdmissionLabels();
-  STATUS_KEY_ORDER.forEach(key => {
-    const label = labels.find(l => l.key === key);
-    if(!label) return;
+  orderedAdmissionLabels().forEach(label => {
+    const canDelete = editMode && (currentClassId === 'mua' ? data.admissionLabels.length > 1 : !isBuiltInStatusKey(label.key));
     const item = document.createElement('div');
     item.className = 'legend-item';
     item.innerHTML = `
       <span class="legend-swatch" style="background:${label.color}"></span>
       <input type="color" class="level-color-input" value="${label.color}">
       <span class="legend-text" contenteditable="${editMode}">${escapeHtml(label.text)}</span>
+      ${canDelete ? '<button class="level-del" title="Xoá trạng thái">−</button>' : ''}
     `;
     const swatch = item.querySelector('.legend-swatch');
     const colorInput = item.querySelector('.level-color-input');
@@ -1659,12 +1692,54 @@ function renderAdmissionsLegend(){
         saveData();
       });
       nameSpan.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+      const delBtn = item.querySelector('.level-del');
+      if(delBtn) delBtn.onclick = () => removeAdmissionLabel(label.key);
     } else {
       swatch.style.cursor = 'default';
     }
     box.appendChild(item);
   });
+  if(editMode){
+    const addBtn = document.createElement('button');
+    addBtn.className = 'level-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'Thêm trạng thái';
+    addBtn.onclick = addAdmissionLabel;
+    box.appendChild(addBtn);
+  }
   container.appendChild(box);
+}
+
+function addAdmissionLabel(){
+  if(!data.admissionLabels) data.admissionLabels = [];
+  const palette = ['#1565c0','#6a1b9a','#ef6c00','#00838f','#ad1457','#5d4037','#2e7d32'];
+  const used = data.admissionLabels.map(l => l.color);
+  const nextColor = palette.find(c => !used.includes(c)) || palette[data.admissionLabels.length % palette.length];
+  data.admissionLabels.push({ key: 'adm-' + Date.now(), text: 'Trạng thái mới', color: nextColor });
+  bumpUpdated();
+  renderAdmissions();
+  saveData();
+  showStatus('Đã thêm trạng thái');
+}
+
+function removeAdmissionLabel(key){
+  if(isBuiltInStatusKey(key)) return;
+  if(currentClassId === 'mua' && data.admissionLabels.length <= 1){
+    showStatus('Cần giữ lại ít nhất 1 trạng thái');
+    return;
+  }
+  if(!confirm('Xoá trạng thái này? Các ca đang dùng trạng thái này sẽ chuyển về ' + (currentClassId === 'mua' ? 'để trống.' : 'tự động theo quy tắc.'))) return;
+  data.admissionLabels = data.admissionLabels.filter(l => l.key !== key);
+  data.rows.forEach(row => {
+    if(!row.statusOverride) return;
+    for(let d=0; d<row.statusOverride.length; d++){
+      if(row.statusOverride[d] === key) row.statusOverride[d] = null;
+    }
+  });
+  bumpUpdated();
+  renderAdmissions();
+  saveData();
+  showStatus('Đã xoá trạng thái');
 }
 
 // ====== KẾ HOẠCH HỌC TẬP ======
